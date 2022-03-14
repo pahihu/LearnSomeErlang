@@ -1,0 +1,23 @@
+St.Laurent: "Introducing Erlang"  pp.88.
+ Eisenberg: "Etudes for Erlang"   pp.44.
+
+
+% common directives
+-author(Name).
+-date(Date).
+
+% others
+-behaviour(Behaviour).
+-record(Name, Fields).
+-vsn(Version).
+
+
+% export all functions defined in the module
+-compile(export_all).
+
+edoc:files(["drop.erl"], [{dir, "doc"}]).
+
+% basic data types for -spec and EDoc
+atom()   binary() float()  fun()    integer()   list()   tuple()
+union()  node()   number() string() char()      byte()   [] (nil)
+any()    none()   pid()    port()   reference()

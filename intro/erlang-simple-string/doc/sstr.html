@@ -1,0 +1,846 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module sstr</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module sstr</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>A single library collecting string functions from elsewhere in Erlang.
+<p>Copyright © 2012 by Simon St.Laurent</p>
+
+<p><b>Version:</b> 0.0001</p>
+<p><b>Authors:</b> Simon St.Laurent (<a href="mailto:simonstl@simonstl.com"><tt>simonstl@simonstl.com</tt></a>) [<em>web site:</em> <tt><a href="http://simonstl.com" target="_top">http://simonstl.com</a></tt>].</p>
+
+<h2><a name="description">Description</a></h2><p>A single library collecting string functions from elsewhere in Erlang.
+  The <code>sstr</code> module assembles string-related functions from the following libraries:</p>
+ 
+  <ul>
+  <li><code>string</code> of course.</li>
+ 
+  <li><code>unicode</code> because <abbr title="Open Telecom Platform">OTP 20</abbr> provides such functionality.</li>
+ 
+  <li><code>lists</code>, because (typical) Erlang strings are lists.</li>
+ 
+  <li><code>erlang</code> because some of the basics lurk there.</li>
+ 
+  <li><p><code>re</code> (<strong>todo</strong>) because regular expressions are a speedy
+  and effective way to manipulate string content.</p></li>
+  </ul>
+ 
+  <p>Developers working with normalized text will probably find most of these functions straightforward.  
+However, a few basic techniques for inspecting strings may be useful when Unicode's variations create  
+surprises.</p>
+ 
+  For example, the word études can be represented two ways.  The first version represents
+  the opening é as a single character:
+  <pre>  1&gt; Test="&amp;#xE9;tude".
+  "&amp;#xE9;tude"</pre>
+  You can see what's inside of that string with <code>io:format</code>'s <code>~w</code>
+  control sequence:
+  <pre>  2&gt; io:format("~w~n",[Test]).
+ [233,116,117,100,101]
+  ok</pre><p>  
+That's five characters, starting with character 233 (or E9 in hex).</p>
+ 
+  The second version represents the é as a regular e plus an acute accent.  (No, this isn't
+  a smart approach for that easily-managed character, but you may encounter this approach
+  used for other characters or in cases where someone decomposed all the Unicode.)
+  <pre>  3&gt; Test2=[101,769,116,117,100,101].
+  [101,769,116,117,100,101]
+  4&gt; io:format("~ts~n",[Test2]).
+  &amp;#xE9;tude
+  ok</pre><p>
+  In this case, the é is represented by two characters, 101 and 769.  That means  
+the list underneath the string is six characters long.</p>
+ 
+  These variations may lead to surprises. [Need to point to normalization / denormalization tools.]
+  <pre>  5&gt; io:format("~ts~n",[unicode:characters_to_list(Test)]).
+  &amp;#xE9;tude
+  ok</pre>
+ 
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-chardata">chardata()</a></h3>
+<p><tt>chardata() = <a href="http://www.erlang.org/edoc/doc/stdlib/doc/unicode.html#type-chardata">unicode:chardata()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-direction">direction()</a></h3>
+<p><tt>direction() = <a href="http://www.erlang.org/edoc/doc/stdlib/doc/string.html#type-direction">string:direction()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-grapheme_cluster">grapheme_cluster()</a></h3>
+<p><tt>grapheme_cluster() = <a href="http://www.erlang.org/edoc/doc/stdlib/doc/string.html#type-grapheme_cluster">string:grapheme_cluster()</a></tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#append-1">append/1</a></td><td>Returs a single string containing all the parts from the arguments in the ListOfStrings.</td></tr>
+<tr><td valign="top"><a href="#append-2">append/2</a></td><td>Returs a single string containing all the parts from the arguments.</td></tr>
+<tr><td valign="top"><a href="#centre-2">centre/2</a></td><td>Returns a string of a specified length, padded with spaces on the left and right if needed.</td></tr>
+<tr><td valign="top"><a href="#centre-3">centre/3</a></td><td>Returns a string of a specified length, padded with PaddingCharacter on the left and right if needed.</td></tr>
+<tr><td valign="top"><a href="#chars-2">chars/2</a></td><td>Returns a string that repeats the given character RepeatCount number of times.</td></tr>
+<tr><td valign="top"><a href="#chars-3">chars/3</a></td><td>Returns a string that repeats the given character RepeatCount number of times and appends a Tail.</td></tr>
+<tr><td valign="top"><a href="#chr-2">chr/2</a></td><td>Returns the position where the specified character first appears.</td></tr>
+<tr><td valign="top"><a href="#concat-1">concat/1</a></td><td>Returs a single string containing all the parts from the ListOfStrings concatenated in the order they appear in the list.</td></tr>
+<tr><td valign="top"><a href="#concat-2">concat/2</a></td><td>Returs a single string containing the two parts from the arguments.</td></tr>
+<tr><td valign="top"><a href="#copies-2">copies/2</a></td><td>Returns a string that repeats the given string RepeatCount number of times.</td></tr>
+<tr><td valign="top"><a href="#cspan-2">cspan/2</a></td><td>Returns the length of the initial segment of a string that contains only characters NOT in CharsList.</td></tr>
+<tr><td valign="top"><a href="#equal-2">equal/2</a></td><td>Checks whether two strings are equal.</td></tr>
+<tr><td valign="top"><a href="#float_to_list-1">float_to_list/1</a></td><td>Converts a float to a string.</td></tr>
+<tr><td valign="top"><a href="#fun_to_list-1">fun_to_list/1</a></td><td>Converts a fun to a string.</td></tr>
+<tr><td valign="top"><a href="#hd-1">hd/1</a></td><td>Returns the first character of the string.</td></tr>
+<tr><td valign="top"><a href="#integer_to_list-1">integer_to_list/1</a></td><td>Converts an integer to a string using Base 10 representation.</td></tr>
+<tr><td valign="top"><a href="#integer_to_list-2">integer_to_list/2</a></td><td>Converts an integer to a string representing it in the specified Base.</td></tr>
+<tr><td valign="top"><a href="#join-2">join/2</a></td><td>Returns a string made from the list of pieces with specified separators added.</td></tr>
+<tr><td valign="top"><a href="#left-2">left/2</a></td><td>Returns a string of a specified length, padded with spaces on the left if needed.</td></tr>
+<tr><td valign="top"><a href="#left-3">left/3</a></td><td>Returns a string of a specified length, padded with PaddingCharacter on the  left if needed.</td></tr>
+<tr><td valign="top"><a href="#len-1">len/1</a></td><td>(<em>Deprecated</em>.) Returns the length of as string.</td></tr>
+<tr><td valign="top"><a href="#length-1">length/1</a></td><td>Counts the number of characters in a string.</td></tr>
+<tr><td valign="top"><a href="#list_to_atom-1">list_to_atom/1</a></td><td>Converts a string to an atom.</td></tr>
+<tr><td valign="top"><a href="#nth-2">nth/2</a></td><td>Returns the character at the specified position.</td></tr>
+<tr><td valign="top"><a href="#rchr-2">rchr/2</a></td><td>Returns the position where the specified character last appears.</td></tr>
+<tr><td valign="top"><a href="#reverse-1">reverse/1</a></td><td>Returns a string which is in reverse order.</td></tr>
+<tr><td valign="top"><a href="#reverse-2">reverse/2</a></td><td>Returns a string which is in reverse order, with a tail added to the end.</td></tr>
+<tr><td valign="top"><a href="#right-2">right/2</a></td><td>Returns a string of a specified length, padded with spaces on the right if needed.</td></tr>
+<tr><td valign="top"><a href="#right-3">right/3</a></td><td>Returns a string of a specified length, padded with PaddingCharacter on the  right if needed.</td></tr>
+<tr><td valign="top"><a href="#rstr-2">rstr/2</a></td><td>Returns the position of the last appearance of a substring in a string.</td></tr>
+<tr><td valign="top"><a href="#span-2">span/2</a></td><td>Returns the length of the initial segment of a string that contains only the characters in CharsList.</td></tr>
+<tr><td valign="top"><a href="#str-2">str/2</a></td><td>Returns the position of the first appearance of a substring in a string.</td></tr>
+<tr><td valign="top"><a href="#strip-1">strip/1</a></td><td>Returns a string with both leading and trailing whitespace removed.</td></tr>
+<tr><td valign="top"><a href="#strip-2">strip/2</a></td><td>Returns a string with leading and/or trailing whitespace removed.</td></tr>
+<tr><td valign="top"><a href="#strip-3">strip/3</a></td><td>Returns a string with leading and/or trailing specified characters removed.</td></tr>
+<tr><td valign="top"><a href="#sub_string-2">sub_string/2</a></td><td>Returns a segment from a string between a Start position and the end.</td></tr>
+<tr><td valign="top"><a href="#sub_string-3">sub_string/3</a></td><td>Returns segment from a string between two positions.</td></tr>
+<tr><td valign="top"><a href="#substr-2">substr/2</a></td><td>Returns a segment of a string from a given position to the end.</td></tr>
+<tr><td valign="top"><a href="#substr-3">substr/3</a></td><td>Returns a segment of a string from a given position of a given length.</td></tr>
+<tr><td valign="top"><a href="#to_float-1">to_float/1</a></td><td>Converts a string to a float representing its contents.</td></tr>
+<tr><td valign="top"><a href="#to_integer-1">to_integer/1</a></td><td>Converts a string to an integer representing its contents.</td></tr>
+<tr><td valign="top"><a href="#to_lower-1">to_lower/1</a></td><td>Returns an lower-case version of a string.</td></tr>
+<tr><td valign="top"><a href="#to_upper-1">to_upper/1</a></td><td>Returns an upper-case version of a string.</td></tr>
+<tr><td valign="top"><a href="#tokens-2">tokens/2</a></td><td>Returns a list of tokens extracted from the string, using the list of characters in SeparatorChars to decompose the string.</td></tr>
+<tr><td valign="top"><a href="#words-1">words/1</a></td><td>Returns the number of words in the string, where blanks are used to indicate breaks between words.</td></tr>
+<tr><td valign="top"><a href="#words-2">words/2</a></td><td>Returns the number of words in the string, where WordSeparator is used to indicate breaks between words.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="append-1">append/1</a></h3>
+<div class="spec">
+<p><tt>append(ListOfStrings) -&gt; NewString</tt>
+<ul class="definitions"><li><tt>ListOfStrings = [<a href="#type-chardata">chardata()</a>]</tt></li><li><tt>NewString = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p> </p>
+<p>returns: new string</p>
+</div><p>Returs a single string containing all the parts from the arguments in the ListOfStrings.
+  <br>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/lists.html#append-1" target="_top">lists:append/1</a>.
+ </p>
+
+<h3 class="function"><a name="append-2">append/2</a></h3>
+<div class="spec">
+<p><tt>append(String1, String2) -&gt; NewString</tt>
+<ul class="definitions"><li><tt>String1 = <a href="#type-chardata">chardata()</a></tt></li><li><tt>String2 = <a href="#type-chardata">chardata()</a></tt></li><li><tt>NewString = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>String1</tt>: input string<br>
+<tt>String2</tt>: input string<br>
+</p>
+<p>returns: new string</p>
+</div><p>Returs a single string containing all the parts from the arguments.
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; sstr:append("abc", "def").
+  "abcdef"</pre>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/lists.html#append-1" target="_top">lists:append/1</a>.
+ </p>
+
+<h3 class="function"><a name="centre-2">centre/2</a></h3>
+<div class="spec">
+<p><tt>centre(String, TargetLength) -&gt; NewString</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>TargetLength = non_neg_integer()</tt></li><li><tt>NewString = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+<tt>TargetLength</tt>: length of a new string<br>
+</p>
+<p>returns: new string</p>
+</div><p>Returns a string of a specified length, padded with spaces on the left and right if needed.
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; sstr:centre("Hello", 10).
+  "     Hello     "</pre>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#pad-4" target="_top">string:pad/4</a>,
+  <a href="http://erlang.org/doc/man/lists.html#flatten-1" target="_top">lists:flatten/1</a>.
+ </p>
+
+<h3 class="function"><a name="centre-3">centre/3</a></h3>
+<div class="spec">
+<p><tt>centre(String, TargetLength, PaddingCharacter) -&gt; NewString</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>TargetLength = non_neg_integer()</tt></li><li><tt>PaddingCharacter = <a href="http://www.erlang.org/edoc/doc/stdlib/doc/string.html#type-grapheme_cluster">string:grapheme_cluster()</a></tt></li><li><tt>NewString = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+<tt>TargetLength</tt>: length of a new string<br>
+</p>
+<p>returns: new string</p>
+</div><p>Returns a string of a specified length, padded with PaddingCharacter on the left and right if needed.
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; sstr:centre("Hello", 10, $.).
+  ".....Hello....."</pre>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#pad-4" target="_top">string:pad/4</a>,
+  <a href="http://erlang.org/doc/man/lists.html#flatten-1" target="_top">lists:flatten/1</a>.</p>
+
+<h3 class="function"><a name="chars-2">chars/2</a></h3>
+<div class="spec">
+<p><tt>chars(Character, RepeatCount) -&gt; String</tt>
+<ul class="definitions"><li><tt>Character = <a href="#type-grapheme_cluster">grapheme_cluster()</a></tt></li><li><tt>RepeatCount = non_neg_integer()</tt></li><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>Character</tt>: a character<br>
+<tt>RepeatCount</tt>: the number of times<br>
+</p>
+<p>returns: new string</p>
+</div><p><p>Returns a string that repeats the given character RepeatCount number of times.</p>
+ 
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/lists.html#duplicate-2" target="_top">lists:duplicate/2</a>.
+ </p>
+<p><b>See also:</b> <a href="#concat-1">concat/1</a>.</p>
+
+<h3 class="function"><a name="chars-3">chars/3</a></h3>
+<div class="spec">
+<p><tt>chars(Character, RepeatCount, Tail) -&gt; String</tt>
+<ul class="definitions"><li><tt>Character = <a href="#type-grapheme_cluster">grapheme_cluster()</a></tt></li><li><tt>RepeatCount = non_neg_integer()</tt></li><li><tt>Tail = <a href="#type-chardata">chardata()</a></tt></li><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>Character</tt>: a character<br>
+<tt>RepeatCount</tt>: the number of times<br>
+<tt>Tail</tt>: additional string<br>
+</p>
+<p>returns: new string</p>
+</div><p><p>Returns a string that repeats the given character RepeatCount number of times and appends a Tail.</p>
+ 
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/lists.html#duplicate-2" target="_top">lists:duplicate/2</a>.
+ </p>
+<p><b>See also:</b> <a href="#concat-2">concat/2</a>.</p>
+
+<h3 class="function"><a name="chr-2">chr/2</a></h3>
+<div class="spec">
+<p><tt>chr(String, CharToFind) -&gt; Position</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>CharToFind = <a href="#type-chardata">chardata()</a></tt></li><li><tt>Position = non_neg_integer() | {error, badarg}</tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+<tt>CharToFind</tt>: char to find as a string<br>
+</p>
+<p>returns: position</p>
+</div><p>Returns the position where the specified character first appears
+  <br>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#find-2" target="_top">string:find/2</a>.
+ </p>
+<p><b>See also:</b> <a href="sstr.html#length-1">sstr:length/1</a>.</p>
+
+<h3 class="function"><a name="concat-1">concat/1</a></h3>
+<div class="spec">
+<p><tt>concat(ListOfStrings) -&gt; NewString</tt>
+<ul class="definitions"><li><tt>ListOfStrings = [<a href="#type-chardata">chardata()</a>]</tt></li><li><tt>NewString = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>ListOfStrings</tt>: list of strings<br>
+</p>
+<p>returns: new string</p>
+</div><p>Returs a single string containing all the parts from the ListOfStrings concatenated in the order they appear in the list.
+  <br>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/lists.html#concat-1" target="_top">lists:concat/1</a>.
+ </p>
+
+<h3 class="function"><a name="concat-2">concat/2</a></h3>
+<div class="spec">
+<p><tt>concat(String1, String2) -&gt; NewString</tt>
+<ul class="definitions"><li><tt>String1 = <a href="#type-chardata">chardata()</a></tt></li><li><tt>String2 = <a href="#type-chardata">chardata()</a></tt></li><li><tt>NewString = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>String1</tt>: input string<br>
+<tt>String2</tt>: input string<br>
+</p>
+<p>returns: new string</p>
+</div><p>Returs a single string containing the two parts from the arguments.
+  <br>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/unicode.html#characters_to_list-2" target="_top">unicode:characters_to_list/2</a>.
+ </p>
+
+<h3 class="function"><a name="copies-2">copies/2</a></h3>
+<div class="spec">
+<p><tt>copies(String, RepeatCount) -&gt; NewString</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>RepeatCount = non_neg_integer()</tt></li><li><tt>NewString = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+<tt>RepeatCount</tt>: the number of times<br>
+</p>
+<p>returns: new string</p>
+</div><p>Equivalent to <tt>chars / 2</tt>.</p>
+<p>Returns a string that repeats the given string RepeatCount number of times.</p>
+<p><b>See also:</b> <a href="sstr.html#chars-2">sstr:chars/2</a>.</p>
+
+<h3 class="function"><a name="cspan-2">cspan/2</a></h3>
+<div class="spec">
+<p><tt>cspan(String, CharsList) -&gt; Length</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>CharsList = [<a href="#type-grapheme_cluster">grapheme_cluster()</a>]</tt></li><li><tt>Length = non_neg_integer()</tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+<tt>CharsList</tt>: list of characters<br>
+</p>
+<p>returns: length of the segment</p>
+</div><p>Returns the length of the initial segment of a string that contains only characters NOT in CharsList.
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; sstr:cspan("\t    abcdef", " \t").
+  0</pre>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#take-2" target="_top">string:take/3</a>.
+ </p>
+<p><b>See also:</b> <a href="sstr.html#length-1">sstr:length/1</a>.</p>
+
+<h3 class="function"><a name="equal-2">equal/2</a></h3>
+<div class="spec">
+<p><tt>equal(String1, String2) -&gt; Result</tt>
+<ul class="definitions"><li><tt>String1 = <a href="#type-chardata">chardata()</a></tt></li><li><tt>String2 = <a href="#type-chardata">chardata()</a></tt></li><li><tt>Result = boolean()</tt></li></ul></p>
+<p><tt>String1</tt>: input string<br>
+<tt>String2</tt>: input string<br>
+</p>
+<p>returns: Result of comparison unicode normalized character lists.</p>
+</div><p>Checks whether two strings are equal. This functions is case sensative.
+  <br>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#equal-4" target="_top">string:equal/4</a>.
+ </p>
+
+<h3 class="function"><a name="float_to_list-1">float_to_list/1</a></h3>
+<div class="spec">
+<p><tt>float_to_list(Float) -&gt; String</tt>
+<ul class="definitions"><li><tt>Float = float()</tt></li><li><tt>String = string()</tt></li></ul></p>
+<p><tt>Float</tt>: float value<br>
+</p>
+<p>returns: string</p>
+</div><p>Converts a float to a string
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; sstr:float_to_list(1.0).
+  "1.0"</pre>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/erlang.html#float_to_list-1" target="_top">erlang:float_to_list/1</a>,
+  <a href="http://erlang.org/doc/man/erlang.html#float_to_list-2" target="_top">erlang:float_to_list/2</a>.
+ </p>
+
+<h3 class="function"><a name="fun_to_list-1">fun_to_list/1</a></h3>
+<div class="spec">
+<p><tt>fun_to_list(Fun) -&gt; String</tt>
+<ul class="definitions"><li><tt>Fun = function()</tt></li><li><tt>String = string()</tt></li></ul></p>
+<p><tt>Fun</tt>: float value<br>
+</p>
+<p>returns: string that represents the code that created Fun.</p>
+</div><p>Converts a fun to a string
+  <br>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/erlang.html#fun_to_list-1" target="_top">erlang:fun_to_list/1</a>.</p>
+
+<h3 class="function"><a name="hd-1">hd/1</a></h3>
+<div class="spec">
+<p><tt>hd(String) -&gt; FirstCharacter</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>FirstCharacter = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+</p>
+<p>returns: character as a string</p>
+</div><p>Returns the first character of the string.
+  <br>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#next_grapheme-1" target="_top">string:next_grapheme/1</a>,
+  <a href="http://erlang.org/doc/man/unicode.html#characters_to_list-1" target="_top">unicode:characters_to_list/1</a>.
+ </p>
+
+<h3 class="function"><a name="integer_to_list-1">integer_to_list/1</a></h3>
+<div class="spec">
+<p><tt>integer_to_list(Int) -&gt; String</tt>
+<ul class="definitions"><li><tt>Int = integer()</tt></li><li><tt>String = string()</tt></li></ul></p>
+<p><tt>Int</tt>: integer value<br>
+</p>
+<p>returns: string</p>
+</div><p>Converts an integer to a string using Base 10 representation.
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; sstr:integer_to_list(77).
+  "77"</pre>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/erlang.html#integer_to_list-1" target="_top">erlang:integer_to_list/1</a>.
+ </p>
+
+<h3 class="function"><a name="integer_to_list-2">integer_to_list/2</a></h3>
+<div class="spec">
+<p><tt>integer_to_list(Int, Base) -&gt; String</tt>
+<ul class="definitions"><li><tt>Int = integer()</tt></li><li><tt>Base = [2..36]</tt></li><li><tt>String = string()</tt></li></ul></p>
+<p><tt>Int</tt>: integer value<br>
+</p>
+<p>returns: string</p>
+</div><p>Converts an integer to a string representing it in the specified Base.
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; sstr:integer_to_list(36,36).
+  "10"</pre>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/erlang.html#integer_to_list-2" target="_top">erlang:integer_to_list/2</a>.
+ </p>
+
+<h3 class="function"><a name="join-2">join/2</a></h3>
+<div class="spec">
+<p><tt>join(List, Separator) -&gt; String</tt>
+<ul class="definitions"><li><tt>List = [<a href="#type-chardata">chardata()</a>]</tt></li><li><tt>Separator = <a href="#type-chardata">chardata()</a></tt></li><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>List</tt>: the list of pieces<br>
+<tt>Separator</tt>: separator of pieces<br>
+</p>
+<p>returns: new string</p>
+</div><p>Returns a string made from the list of pieces with specified separators added.
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; sstr:join(["one", "two", "three"], ", ").
+  "one, two, three"</pre>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/lists.html#join-2" target="_top">lists:join/2</a>.</p>
+<p><b>See also:</b> <a href="sstr.html#concat-1">sstr:concat/1</a>.</p>
+
+<h3 class="function"><a name="left-2">left/2</a></h3>
+<div class="spec">
+<p><tt>left(String, TargetLength) -&gt; NewString</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>TargetLength = non_neg_integer()</tt></li><li><tt>NewString = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+<tt>TargetLength</tt>: length of a new string<br>
+</p>
+<p>returns: new string</p>
+</div><p>Returns a string of a specified length, padded with spaces on the left if needed.
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; sstr:left("Hello", 10).
+  "Hello     "</pre>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#pad-4" target="_top">string:pad/4</a>,
+  <a href="http://erlang.org/doc/man/lists.html#flatten-1" target="_top">lists:flatten/1</a>.
+ </p>
+
+<h3 class="function"><a name="left-3">left/3</a></h3>
+<div class="spec">
+<p><tt>left(String, TargetLength, PaddingCharacter) -&gt; NewString</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>TargetLength = non_neg_integer()</tt></li><li><tt>PaddingCharacter = <a href="http://www.erlang.org/edoc/doc/stdlib/doc/string.html#type-grapheme_cluster">string:grapheme_cluster()</a></tt></li><li><tt>NewString = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+<tt>TargetLength</tt>: length of a new string<br>
+</p>
+<p>returns: new string</p>
+</div><p>Returns a string of a specified length, padded with PaddingCharacter on the  left if needed.
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; sstr:left("Hello", 10, $.).
+  ".....Hello"</pre>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#pad-4" target="_top">string:pad/4</a>,
+  <a href="http://erlang.org/doc/man/lists.html#flatten-1" target="_top">lists:flatten/1</a>.
+ </p>
+
+<h3 class="function"><a name="len-1">len/1</a></h3>
+<div class="spec">
+<p><tt>len(String) -&gt; Length</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>Length = non_neg_integer()</tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+</p>
+<p>returns: length of a data list.</p>
+</div><p><b>This function is deprecated:</b> Please use the <a docgen-rel="seemfa" docgen-href="#length/1" href="#length-1"><code>length/1</code></a> instead.</p>
+<p>Returns the length of as string.
+  <br>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#len-1" target="_top">string:len/1</a>.
+ </p>
+
+<h3 class="function"><a name="length-1">length/1</a></h3>
+<div class="spec">
+<p><tt>length(String) -&gt; Length</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>Length = non_neg_integer()</tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+</p>
+<p>returns: count of characters in a string.</p>
+</div><p>Counts the number of characters in a string.
+  <br>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#length-1" target="_top">string:length/1</a>.
+ </p>
+
+<h3 class="function"><a name="list_to_atom-1">list_to_atom/1</a></h3>
+<div class="spec">
+<p><tt>list_to_atom(String) -&gt; atom()</tt>
+<ul class="definitions"><li><tt>String = string()</tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+</p>
+<p>returns: string that represents the code that created Fun.</p>
+</div><p>Converts a string to an atom.
+  <blockquote>
+  As from Erlang/OTP 20, String may contain any Unicode character.
+  </blockquote>
+  <br>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/erlang.html#list_to_atom-1" target="_top">erlang:list_to_atom/1</a>.</p>
+
+<h3 class="function"><a name="nth-2">nth/2</a></h3>
+<div class="spec">
+<p><tt>nth(Position, String) -&gt; Character</tt>
+<ul class="definitions"><li><tt>Position = non_neg_integer()</tt></li><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>Character = <a href="#type-chardata">chardata()</a> | {error, <a href="#type-chardata">chardata()</a>} | {error, badarg}</tt></li></ul></p>
+<p><tt>Position</tt>: the specified position<br>
+<tt>String</tt>: input string<br>
+</p>
+<p>returns: character as a string</p>
+</div><p>Returns the character at the specified position.
+  Position start at 0.
+  <br>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#length-1" target="_top">string:length/1</a>,
+  <a href="http://erlang.org/doc/man/string.html#next_grapheme-1" target="_top">string:next_grapheme/1</a>.
+ </p>
+
+<h3 class="function"><a name="rchr-2">rchr/2</a></h3>
+<div class="spec">
+<p><tt>rchr(String, CharToFind) -&gt; Position</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>CharToFind = <a href="#type-chardata">chardata()</a></tt></li><li><tt>Position = non_neg_integer() | {error, badarg}</tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+<tt>CharToFind</tt>: char to find as a string<br>
+</p>
+<p>returns: position</p>
+</div><p>Returns the position where the specified character last appears.
+  <br>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#find-2" target="_top">string:find/2</a>.
+ </p>
+<p><b>See also:</b> <a href="sstr.html#chr-3">sstr:chr/3</a>, <a href="sstr.html#length-1">sstr:length/1</a>.</p>
+
+<h3 class="function"><a name="reverse-1">reverse/1</a></h3>
+<div class="spec">
+<p><tt>reverse(String) -&gt; NewString</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>NewString = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+</p>
+<p>returns: reversed input string</p>
+</div><p>Returns a string which is in reverse order.
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; Reverse = sstr:reverse("ÅÄÖ").
+  [79,776,65,776,65,778]
+  2&gt; io:format("~ts~n",[Reverse]).
+  ÖÄÅ</pre>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#reverse-1" target="_top">string:reverse/1</a>,
+  <a href="http://erlang.org/doc/man/lists.html#flatten-1" target="_top">lists:flatten/1</a>.
+ </p>
+
+<h3 class="function"><a name="reverse-2">reverse/2</a></h3>
+<div class="spec">
+<p><tt>reverse(String, Tail) -&gt; NewString</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>Tail = <a href="#type-chardata">chardata()</a></tt></li><li><tt>NewString = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+<tt>Tail</tt>: additional string<br>
+</p>
+<p>returns: new string</p>
+</div><p>Returns a string which is in reverse order, with a tail added to the end.</p>
+<p><b>See also:</b> <a href="sstr.html#concat-2">sstr:concat/2</a>, <a href="sstr.html#reverse-1">sstr:reverse/1</a>.</p>
+
+<h3 class="function"><a name="right-2">right/2</a></h3>
+<div class="spec">
+<p><tt>right(String, TargetLength) -&gt; NewString</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>TargetLength = non_neg_integer()</tt></li><li><tt>NewString = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+<tt>TargetLength</tt>: length of a new string<br>
+</p>
+<p>returns: new string</p>
+</div><p>Returns a string of a specified length, padded with spaces on the right if needed.
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; sstr:right("Hello", 10).
+  "Hello     "</pre>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#pad-4" target="_top">string:pad/4</a>,
+  <a href="http://erlang.org/doc/man/lists.html#flatten-1" target="_top">lists:flatten/1</a>.
+ </p>
+
+<h3 class="function"><a name="right-3">right/3</a></h3>
+<div class="spec">
+<p><tt>right(String, TargetLength, PaddingCharacter) -&gt; NewString</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>TargetLength = non_neg_integer()</tt></li><li><tt>PaddingCharacter = <a href="http://www.erlang.org/edoc/doc/stdlib/doc/string.html#type-grapheme_cluster">string:grapheme_cluster()</a></tt></li><li><tt>NewString = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+<tt>TargetLength</tt>: length of a new string<br>
+</p>
+<p>returns: new string</p>
+</div><p>Returns a string of a specified length, padded with PaddingCharacter on the  right if needed.
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; sstr:left("Hello", 10, $.).
+  "Hello....."</pre>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#pad-4" target="_top">string:pad/4</a>,
+  <a href="http://erlang.org/doc/man/lists.html#flatten-1" target="_top">lists:flatten/1</a>.
+ </p>
+
+<h3 class="function"><a name="rstr-2">rstr/2</a></h3>
+<div class="spec">
+<p><tt>rstr(String, SubstringToFind) -&gt; Position</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>SubstringToFind = <a href="#type-chardata">chardata()</a></tt></li><li><tt>Position = non_neg_integer() | {error, badarg}</tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+<tt>SubstringToFind</tt>: substring<br>
+</p>
+<p>returns: position</p>
+</div><p>Returns the position of the last appearance of a substring in a string.</p>
+<p><b>See also:</b> <a href="sstr.html#rchr-2">sstr:rchr/2</a>.</p>
+
+<h3 class="function"><a name="span-2">span/2</a></h3>
+<div class="spec">
+<p><tt>span(String, CharsList) -&gt; Length</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>CharsList = [<a href="#type-grapheme_cluster">grapheme_cluster()</a>]</tt></li><li><tt>Length = non_neg_integer()</tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+<tt>CharsList</tt>: list of characters<br>
+</p>
+<p>returns: length of the segment</p>
+</div><p>Returns the length of the initial segment of a string that contains only the characters in CharsList.
+  <br>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#take-2" target="_top">string:take/2</a>.
+ </p>
+<p><b>See also:</b> <a href="#length-1">length/1</a>.</p>
+
+<h3 class="function"><a name="str-2">str/2</a></h3>
+<div class="spec">
+<p><tt>str(String, SubstringToFind) -&gt; Position</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>SubstringToFind = <a href="#type-chardata">chardata()</a></tt></li><li><tt>Position = non_neg_integer() | {error, badarg}</tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+<tt>SubstringToFind</tt>: substring<br>
+</p>
+<p>returns: position</p>
+</div><p>Returns the position of the first appearance of a substring in a string.</p>
+<p><b>See also:</b> <a href="sstr.html#chr-2">sstr:chr/2</a>.</p>
+
+<h3 class="function"><a name="strip-1">strip/1</a></h3>
+<div class="spec">
+<p><tt>strip(String) -&gt; NewString</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>NewString = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+</p>
+<p>returns: new string</p>
+</div><p>Returns a string with both leading and trailing whitespace removed
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; string:strip("\r   Hello     \n").
+  "Hello"</pre>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#trim-1" target="_top">string:trim/1</a>.
+ </p>
+
+<h3 class="function"><a name="strip-2">strip/2</a></h3>
+<div class="spec">
+<p><tt>strip(String, Direction) -&gt; NewString</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>Direction = <a href="#type-direction">direction()</a> | both</tt></li><li><tt>NewString = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+<tt>Direction</tt>: leading | trailing | both<br>
+</p>
+<p>returns: new string</p>
+</div><p>Returns a string with leading and/or trailing whitespace removed.
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; sstr:strip("Hello     \n", leading).
+  "Hello     \n"</pre>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#trim-2" target="_top">string:trim/2</a>.
+ </p>
+
+<h3 class="function"><a name="strip-3">strip/3</a></h3>
+<div class="spec">
+<p><tt>strip(String, Direction, Characters) -&gt; NewString</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>Direction = <a href="#type-direction">direction()</a> | both</tt></li><li><tt>Characters = [<a href="http://www.erlang.org/edoc/doc/stdlib/doc/string.html#type-grapheme_cluster">string:grapheme_cluster()</a>]</tt></li><li><tt>NewString = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+<tt>Direction</tt>: leading | trailing | both<br>
+</p>
+<p>returns: new string</p>
+</div><p>Returns a string with leading and/or trailing specified characters removed.
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; sstr:strip(&lt;&lt;".Hello.\n"&gt;&gt;, trailing, "\n.").
+  &lt;&lt;".Hello"&gt;&gt;</pre>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#trim-3" target="_top">string:trim/3</a>.
+ </p>
+
+<h3 class="function"><a name="sub_string-2">sub_string/2</a></h3>
+<div class="spec">
+<p><tt>sub_string(String, Start) -&gt; SubString</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>Start = non_neg_integer()</tt></li><li><tt>SubString = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+<tt>Start</tt>: start position<br>
+</p>
+<p>returns: substring</p>
+</div><p>Returns a segment from a string between a Start position and the end.</p>
+<p><b>See also:</b> <a href="sstr.html#substr-2">sstr:substr/2</a>.</p>
+
+<h3 class="function"><a name="sub_string-3">sub_string/3</a></h3>
+<div class="spec">
+<p><tt>sub_string(String, Start, End) -&gt; SubString</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>Start = non_neg_integer()</tt></li><li><tt>End = non_neg_integer()</tt></li><li><tt>SubString = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+<tt>Start</tt>: start position<br>
+<tt>End</tt>: end position<br>
+</p>
+<p>returns: substring</p>
+</div><p>Returns segment from a string between two positions.</p>
+<p><b>See also:</b> <a href="sstr.html#substr-3">sstr:substr/3</a>.</p>
+
+<h3 class="function"><a name="substr-2">substr/2</a></h3>
+<div class="spec">
+<p><tt>substr(String, Start) -&gt; SubString</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>Start = non_neg_integer()</tt></li><li><tt>SubString = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+<tt>Start</tt>: start position<br>
+</p>
+<p>returns: sstr:substring</p>
+</div><p>Returns a segment of a string from a given position to the end.
+  <br>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#slice-2" target="_top">string:slice/2</a>.
+ </p>
+
+<h3 class="function"><a name="substr-3">substr/3</a></h3>
+<div class="spec">
+<p><tt>substr(String, Start, Length) -&gt; SubString</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>Start = non_neg_integer()</tt></li><li><tt>Length = non_neg_integer()</tt></li><li><tt>SubString = <a href="#type-chardata">chardata()</a></tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+<tt>Start</tt>: start position<br>
+<tt>Length</tt>: a length of the segment<br>
+</p>
+<p>returns: sstr:substring</p>
+</div><p>Returns a segment of a string from a given position of a given length.
+  <br>
+  <b>See also:</b> <a href="http://erlang.org/doc/man/string.html#slice-4" target="_top">string:slice/4</a>.
+ </p>
+
+<h3 class="function"><a name="to_float-1">to_float/1</a></h3>
+<div class="spec">
+<p><tt>to_float(String) -&gt; Float | {error, Reason}</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>Float = float()</tt></li><li><tt>Reason = no_float | badarg</tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+</p>
+<p>returns: a float value</p>
+</div><p>Converts a string to a float representing its contents.
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; F1 = sstr:to_float("1.0-1.0e-1"),
+  1&gt; F2 = sstr:to_float("-1.0e-1"),
+  1&gt; F1+F2.
+  0.9
+  2&gt; sstr:to_float("3/2=1.5").
+  {error,no_float}
+  3&gt; sstr:to_float("-1.5eX").
+  -1.5</pre>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#to_float-1" target="_top">string:to_float/1</a>.
+ </p>
+
+<h3 class="function"><a name="to_integer-1">to_integer/1</a></h3>
+<div class="spec">
+<p><tt>to_integer(String) -&gt; Int | {error, Reason}</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>Int = integer()</tt></li><li><tt>Reason = no_integer | badarg</tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+</p>
+<p>returns: an integer value</p>
+</div><p>Converts a string to an integer representing its contents.
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; I1 = sstr:to_integer("33"),
+  1&gt; I2 = sstr:to_integer("+22"),
+  1&gt; I1-I2.
+  11
+  2&gt; sstr:to_integer("0.5").
+  0
+  3&gt; sstr:to_integer("x=2").
+  {error,no_integer}</pre>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#to_integer-1" target="_top">string:to_integer/1</a>.
+ </p>
+
+<h3 class="function"><a name="to_lower-1">to_lower/1</a></h3>
+<div class="spec">
+<p><tt>to_lower(String) -&gt; NewString</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>NewString = <a href="#type-chardata">chardata()</a> | {error, <a href="#type-chardata">chardata()</a>}</tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+</p>
+<p>returns: lower case string</p>
+</div><p>Returns an lower-case version of a string.
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; sstr:to_lower("MICHAŁ").
+  "michał"</pre>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#lowercase-1" target="_top">string:lowercase/1</a>.
+ </p>
+
+<h3 class="function"><a name="to_upper-1">to_upper/1</a></h3>
+<div class="spec">
+<p><tt>to_upper(String) -&gt; NewString</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>NewString = <a href="#type-chardata">chardata()</a> | {error, <a href="#type-chardata">chardata()</a>}</tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+</p>
+<p>returns: upper case string</p>
+</div><p>Returns an upper-case version of a string.
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; sstr:to_upper("michał").
+  "MICHAŁ"</pre>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#uppercase-1" target="_top">string:uppercase/1</a>.
+ </p>
+
+<h3 class="function"><a name="tokens-2">tokens/2</a></h3>
+<div class="spec">
+<p><tt>tokens(String, SeparatorChars) -&gt; List</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>SeparatorChars = [<a href="#type-grapheme_cluster">grapheme_cluster()</a>]</tt></li><li><tt>List = [<a href="#type-chardata">chardata()</a>]</tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+<tt>SeparatorChars</tt>: string separator<br>
+</p>
+<p>returns: list of tokens</p>
+</div><p>Returns a list of tokens extracted from the string, using the list of characters in SeparatorChars to decompose the string.
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; sstr:tokens("abc defxxghix jkl", "x ").
+  ["abc", "def", "ghi", "jkl"]</pre>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#lexemes-2" target="_top">string:lexemes/2</a>.
+ </p>
+
+<h3 class="function"><a name="words-1">words/1</a></h3>
+<div class="spec">
+<p><tt>words(String) -&gt; Count</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>Count = non_neg_integer()</tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+</p>
+<p>returns: the number of words in the string</p>
+</div><p>Returns the number of words in the string, where blanks are used to indicate breaks between words.
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; sstr:words("Hello old boy!").
+  3</pre></p>
+<p><b>See also:</b> <a href="#words-2">words/2</a>.</p>
+
+<h3 class="function"><a name="words-2">words/2</a></h3>
+<div class="spec">
+<p><tt>words(String, WordSeparator) -&gt; Count</tt>
+<ul class="definitions"><li><tt>String = <a href="#type-chardata">chardata()</a></tt></li><li><tt>WordSeparator = <a href="#type-grapheme_cluster">grapheme_cluster()</a></tt></li><li><tt>Count = non_neg_integer()</tt></li></ul></p>
+<p><tt>String</tt>: input string<br>
+<tt>WordSeparator</tt>: separator<br>
+</p>
+<p>returns: the number of words in the string</p>
+</div><p>Returns the number of words in the string, where WordSeparator is used to indicate breaks between words.
+  <br>
+  <b>Example:</b>
+  <pre>  1&gt; sstr:words(" Hello old boy!", [$o]).
+  4</pre>
+  <b>See also:</b>
+  <a href="http://erlang.org/doc/man/string.html#lexemes-2" target="_top">string:lexemes/2</a>,
+  <a href="http://erlang.org/doc/man/erlang.html#length-1" target="_top">erlang:length/1</a>.
+ </p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

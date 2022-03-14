@@ -1,0 +1,76 @@
+                      iMac  Obelix     BUDA
+                     ======================
+sort_bm               
+sorted                6702	  36111	      0
+reversed              4444	  26716	  16000
+random               20332	 205533	  31000
+all_same              4418	  36349	      0
+		
+ref_bm
+make_ref               747	   3577	      0
+		
+lists_bm	
+last                 28590	  97374	  31000
+		
+lc_bm
+ident_nolc           10201	  37859	      0
+ident_lc              4071	  15839	  15000
+filter_nolc           7523	  39392	      0
+filter_lc             3753	  15842	  16000
+		
+fun_bm
+make_fun               770	   3570	      0
+no_args              40841	 163164	  47000
+one_arg              51066	 261480	  31000
+two_args             54172	 263730	  47000
+one_free             60100	 195732	  47000
+two_free             64355	 168430	  47000
+		
+freq_bm
+tuple               174214	 338672	 108999
+ets                 161354	 604884	 172000
+		
+float_bm
+float_add             1086	   3576	      0
+float_sub              927	   3572	      0
+float_mul             1221	   3582	      0
+float_div              929	   3575	      0
+		
+call_tail_bm
+local_tail_call      48878	 146019	  47000
+external_tail_call   46966	 161698	  47000
+		
+call_bm
+local_call           28470	 114399	  31000
+external_call        34673	 133161	  31000
+fun_call             92086	 317967	  78000
+apply_fun            90987	 317802	  78999
+apply_mfa            29941	 133000	  31000
+atom_apply_mfa       32203	 133323	  15000
+select               46440	 160076	  47000
+		
+bs_sum_bm
+lists               108947	 483790	  78000
+bs                   53615	 400013	  47000
+bs_unrolled          42835	 329143	  32000
+		
+bs_sum32_bm
+lists               139702	1858646	  62000
+bs                   29007	 661093	  16000
+bs_unrolled          16521	 633780	  15000
+		
+bs_simple_bm
+lists                 5603	  40943	  16000
+bs                    9735	  57966	      0
+bs_bif                1316	   7360	      0
+		
+bs_float_bm
+float               226641	 521316	 186999
+		
+bs_bm
+lists               125681	 654747	 110000
+bs                   29263	  82117	  15000
+partly_bs            27010	  81225	  32000
+		
+bin_to_term_bm
+t_binary_to_term    328612	1042812	 249999

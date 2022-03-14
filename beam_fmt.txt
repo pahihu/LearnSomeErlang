@@ -1,0 +1,154 @@
+File format for Beam R5 and later
+=================================
+Bjoern Gustavsson
+
+Last update of this document: Mar 1, 2000.
+
+This file format is based on EA IFF 85 - Standard for Interchange Format Files. 
+This "standard" is not widely used; the only uses I know of is the IFF graphic 
+file format for the Amiga and Blorb (a resource file format for Interactive 
+Fiction games). Despite of this, I decided to use IFF instead of inventing my 
+of own format, because IFF is almost right.
+
+The only thing that is not right is the even alignment of chunks. I use 
+four-byte alignment instead. Because of this change, Beam files starts with 
+'FOR1' instead of 'FORM' to allow reader programs to distinguish "classic" IFF 
+from "beam" IFF. The name 'FOR1' is included in the IFF document as a future way
+to extend IFF.
+
+In the description of the chunks that follow, the word mandatory means that the 
+module cannot be loaded without it.
+
+
+Form header
+-----------
+
+4 bytes	'FOR1'	Magic number indicating an IFF form. This is an extension to 
+                  IFF indicating that all chunks are four-byte aligned.
+4 bytes	n	      Form length (file length - 8)
+4 bytes	'BEAM'	Form type
+n-8 bytes	...	The chunks, concatenated.
+
+
+Atom table chunk
+----------------
+
+The atom table chunk is mandatory. The first atom in the table must be the 
+module name.
+
+4 bytes	'Atom'	chunk ID
+4 bytes	size	   total chunk length
+4 bytes	n	      number of atoms
+xx bytes	...	   Atoms. Each atom is a string preceeded by the length in a 
+                  byte.
+
+
+Export table chunk
+------------------
+
+The export table chunk is mandatory. This table is used by the loader to know 
+which functions should be exported. It is also useful for cross reference tools.
+
+4 bytes	'ExpT'	chunk ID
+4 bytes	size	   total chunk length
+4 bytes	n	      number of entries
+xx bytes	...	   Function entries (each 3 * 4 bytes): Function, Arity, Label
+
+
+Import table chunk
+------------------
+
+The import table chunk is mandatory.
+
+4 bytes	'ImpT'	chunk ID
+4 bytes	size	   total chunk length
+4 bytes	n	      number of entries
+xx bytes	...	   Import entries (each 3 * 4 bytes): Module, Function, Arity.
+
+
+Code chunk
+----------
+
+The code chunk is, obviously, mandatory.
+
+4 bytes	'Code'	chunk ID
+4 bytes	size	   total chunk length
+4 bytes	sub-size	Length of information fields before code. This allow the 
+                  header to extended, and an older loader will still know where                   the code starts.
+4 bytes	set	   Instruction set identifer. Will be 0 for OTP R5. Should be 
+                  bumped if the instructions are changed in incompatible ways 
+                  (if the semantics or argument types for an instruction are 
+                  changed, or if instructions are deleted or renumbered).
+4 bytes	opcode_max	The highest opcode used in the code section. This allows 
+                  easy addition of new opcodes. The loader should refuse to load                  the file if opcode_max is greater than the maximum opcode it 
+                  knows about.
+4 bytes	labels	Number of labels (to help loader allocate label table).
+4 bytes	functions	Number of functions.
+xx bytes	...	Code.
+
+
+String table chunk
+------------------
+
+The string table chunk is mandatory. (If there are no literal strings in a 
+module, the chunk size should be 0.)
+
+4 bytes	'StrT'	chunk ID
+4 bytes	sz	      total chunk length
+sz bytes	...	   Strings.
+
+
+Attributes chunk
+----------------
+
+The attributes chunk is optional, but the release handler in OTP might get 
+unhappy if the -vsn attribute is missing.
+
+4 bytes	'Attr'	chunk ID
+4 bytes	size	   total data size
+size bytes	...	List of all attributes (returned by 
+                  Mod:module_info(attributes)) in Erlang external term format.
+
+
+Compilation information chunk
+-----------------------------
+
+The compilation information chunk is optional, but some OTP tools might not work
+correctly if it missing.
+
+4 bytes	'CInf'	chunk ID
+4 bytes	size	   total data size
+size bytes	...	List of all compilation information (returned by 
+                  Mod:module_info(compile)) in Erlang external term format.
+
+
+Local function table chunk
+--------------------------
+
+The local table chunk is optional (it is ignored by the loader). It might be 
+useful for cross reference tools. It can safely be stripped if you don't plan to
+run cross-reference tools that work directly on Beam files.
+
+4 bytes	'LocT'	chunk ID
+4 bytes	size	   total chunk length
+4 bytes	n	      number of entries
+xx bytes	...	   Function entries (each 3 * 4 bytes): Function, Arity, Label. 
+                  (The Label is probably not very useful, but including it gives                  this table exactly the same format as the export table.)
+
+
+Function trace chunk
+--------------------
+
+The trace chunk should not be present unless you want support for function 
+tracing.
+If this chunk is present in a beam file, the R5 and R6 loaders will insert 
+special trace instructions to support function tracing. Any data in the chunk 
+will be ignored.
+
+The loader in R7 ignores this chunk completely. (There will be a better way to 
+do call tracing in R7.)
+
+4 bytes	'Trac'	chunk ID
+4 bytes	size	   total data size
+size bytes	...	Trace options.
+

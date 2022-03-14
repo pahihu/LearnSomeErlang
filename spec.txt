@@ -1,0 +1,66 @@
+Type :: any()                   %% The top type, the set of all Erlang terms
+        | none()                %% The bottom type, contains no terms
+        | pid()
+        | port()
+        | reference()
+        | []                    %% nil
+        | Atom
+        | Bitstring
+        | float()
+        | Fun
+        | Integer
+        | List
+        | Map
+        | Tuple
+        | Union
+        | UserDefined           %% described in Type Decls of User-Defined Types
+
+  Atom :: atom()
+        | Erlang_Atom           %% 'foo', 'bar', ...
+
+  Bitstring :: <<>>
+             | <<_:M>>          %% M is an Int_Value that evals to a pos_integer
+             | <<_:_*N>>        %% N is an Int_Value that evals to a pos_integer
+             | <<_:M, _:_*N>>
+
+  Fun :: fun()                  %% any function
+       | fun((...) -> Type)     %% any arity, returning Type
+       | fun(() -> Type)
+       | fun((TList) -> Type)
+
+  Integer :: integer()
+           | Integer_Value
+           | Integer_Value..Integer_Value      %% specifies an integer range
+
+  Integer_Value :: Erlang_Integer              %% ..., -1, 0, 1, ... 42 ...
+                 | Erlang_Character            %% $a, $b ...
+                 | Integer_Value BinaryOp Integer_Value
+                 | UnaryOp Integer_Value
+
+  BinaryOp :: '*' | 'div' | 'rem' | 'band' | 
+              '+' | '-' | 'bor' | 'bxor' | 'bsl' | 'bsr'
+
+  UnaryOp :: '+' | '-' | 'bnot'
+
+  List :: list(Type)                           %% Proper list ([]-terminated)
+        | maybe_improper_list(Type1, Type2)    %% Type1=contents, Type2=termination
+        | nonempty_improper_list(Type1, Type2) %% Type1 and Type2 as above
+        | nonempty_list(Type)                  %% Proper non-empty list
+
+  Map :: #{}                                   %% denotes the empty map
+       | #{AssociationList}
+
+  Tuple :: tuple()                             %% denotes a tuple of any size
+         | {}
+         | {TList}
+
+  AssociationList :: Association
+                   | Association, AssociationList
+
+  Association :: Type := Type                  %% denotes a mandatory assoc
+               | Type => Type                  %% denotes an optional assoc
+
+  TList :: Type
+         | Type, TList
+
+  Union :: Type1 | Type2

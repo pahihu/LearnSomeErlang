@@ -1,0 +1,156 @@
+
+size/1   - tuple/byte/bit size
+tuple_size/1   {4,2}
+byte_size/1    <<"42">>
+bit_size/1     <<101010>>
+
+f(X) when cond1; cond2; ...   % any cond succeeds
+f(X) when cond1, cond2, ...   % all cond must succeed
+
+
+% Guards
+is_atom(X)
+   hello, 'hello'
+is_float(X)
+   1.2 3.0e10
+is_integer(X)
+   42 $a 16#2A 2#101010
+is_list(X)
+   [alpha, 2]
+is_number(X)
+is_pid(X)
+is_port(X)
+is_reference(X)
+is_tuple(X)
+   {1, 2, 3}
+
+
+% also allowed in guards
+float round trunc
+hd tl length
+
+self()
+   current process Pid
+element(N,T)
+   nth element of tuple
+size(T)
+   numelts in tuple
+
+
+% guard operations
+X > Y
+X < Y
+X =< Y
+X >= Y
+X == Y
+X /= Y
+X =:= Y
+X =/= Y
+
+
+% arithmetic ops
++X
+-X
+X * Y
+X / Y
+X div Y
+X rem Y
+X band Y
+X + Y
+X - Y
+X bor Y
+X bxor Y
+X bsl Y
+X bsr Y
+
+
+atom_to_list float_to_list integer_to_list
+list_to_atom list_to_float list_to_integer
+hd tl length
+
+% Process dictionary
+
+put([Key, Val]) -> OldVal
+get() -> Dict
+get(Key) -> Val
+erase() -> Dict
+erase(Key) -> OldVal
+get_keys() -> LstKeys
+get_keys(Val) -> LstKeys
+
+% Processes, Messages
+Pid = spawn(module, fn, [args])
+Pid = spawn(node, module, fn, [args])
+
+% !!! NO GUARANTEE OF MESSAGE DELIVERY !!!
+Pid ! Expr
+
+% Registered names on local nodes
+register(Name, Pid)
+unregister(Name)
+whereis(Name)
+
+{Name, Node} ! Expr
+
+receive
+   Msg1 [when Guard1] -> Act1;
+   ...
+   MsgN [when Guard1] -> ActN;
+after
+   TimeOut -> ActT
+end
+
+
+% Code loading
+
+load_file(Module)
+% module loaded replaces existing module that is made old
+% any other copies removed from memory
+
+delete(Module)
+% makes Module old, new invocations will not be able to access
+% the deleted module
+
+purge(Module)
+% removed code of the named module marked as old
+% processes running the old module code will be killed
+
+soft_purge(Module)
+% similar to purge except it will not purge a module if
+% it is currently been used
+
+is_loaded(Module)
+% {file, Path|preloaded|interpreted}
+
+
+% Style
+Modules
+- minimise the number of functions exported from a module
+      reduces module coupling
+- use functions to encapsulate common code
+      avoid cut&paste programming
+- do not presume that the data structures provided by a module
+  are unchanging
+      avoid direct access
+- use interface functions
+      avoid sending messages directly
+
+Functions
+- avoid side effects
+- do not assume what the user of a function wants to do with its
+  results
+      eg. do not display error messages
+
+Messages
+- tag messages
+      reduces the sensitivity of msgs to order
+- dispose of unknown messages
+      every server should incorporate a match all pattern
+      in at least one of its receives
+
+General
+- avoid defensive programming
+- separate handling of error cases from normal code
+- write declarative code
+      use guards in function heads where possible,
+      instead of if/case operations

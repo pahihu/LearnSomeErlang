@@ -27,34 +27,25 @@ battle({Players, InWar, Stats = {NumBattles, NumWars}}, Pile) ->
    CurrentPile = Pile ++ Hand,
    io:format("Battle ~p, on hand ~p~n", [NumBattles, Hand]),
    Rank1 = rank(Card1), Rank2 = rank(Card2),
-   if
-      Rank1 =:= Rank2 ->
-         Winner = draw;
-      Rank1 > Rank2 ->
-         Winner = Player1;
-      Rank1 < Rank2 ->
-         Winner = Player2
+   Winner = if
+      Rank1 =:= Rank2 -> draw;
+      Rank1  >  Rank2 -> Player1;
+      Rank1  <  Rank2 -> Player2
    end,
-   case Winner of
+   NewPile = case Winner of
       draw ->
-         if
-            InWar ->
-               NewInWar = true,
-               NewNumWars = NumWars,
-               io:format("  Draw, continuing war ~p...~n",[NumWars]);
-            true ->
-               NewInWar = true,
-               NewNumWars = NumWars+1,
-               io:format("  Draw, entering war ~p!~n",[NewNumWars])
+         {WarState, NewInWar, NewNumWars} = if
+            InWar -> {"continuing", true, NumWars};
+             true -> {  "entering", true, NumWars+1}
          end,
-         NewPile = CurrentPile;
+         io:format("  Draw, ~s war ~p!~n",[WarState,NewNumWars]),
+         CurrentPile;
       X ->
          io:format("  ~s won the battle...~n",[get_name(X)]),
          io:format("  adding ~p.~n", [CurrentPile]),
          add_cards(X, CurrentPile),
-         NewInWar = false,
-         NewNumWars = NumWars,
-         NewPile = []
+         {NewInWar, NewNumWars} = {false, NumWars},
+         []
    end,
    play({Players, NewInWar, {NumBattles+1,NewNumWars}}, NewPile).
 
@@ -124,13 +115,10 @@ get_cards(Stats) ->
 
 check_empty({NumBattles, NumWars},
             Hand = [{Player1, Cards1}, {Player2, Cards2}]) ->
-   if
-      length(Cards1) =:= 0 ->
-         Winner = Player2;
-      length(Cards2) =:=0 ->
-         Winner = Player1;
-      true ->
-         Winner = none
+   Winner = if
+      length(Cards1) =:= 0 -> Player2;
+      length(Cards2) =:= 0 -> Player1;
+                      true -> none
    end,
    case Winner of
       none ->

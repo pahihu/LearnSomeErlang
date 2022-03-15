@@ -154,3 +154,15 @@ General
 - write declarative code
       use guards in function heads where possible,
       instead of if/case operations
+
+observer:start().
+error_logger:info_msg/warning_msg/error_msg/2
+error_logger:logfile/1
+debugger:start()
+
+dbg:tracer()
+dbg:p(Pid,m)   % messages
+dbg:p(all,c)   % calls
+dbg:tpl(M,F,A)
+dbg:stop()
+dbg:stop_clear()

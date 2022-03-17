@@ -3,7 +3,7 @@
 
 mph_drop() ->
    process_flag(trap_exit,true),
-   Drop=spawn_link(drop,drop,[]),
+   Drop=spawn_link(dropsrv,drop,[]),
    convert(Drop).
 
 convert(Drop) ->

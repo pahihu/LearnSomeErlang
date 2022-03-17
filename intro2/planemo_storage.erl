@@ -1,5 +1,5 @@
 -module(planemo_storage).
--export([setup/0]).
+-export([setup/0, persist/0]).
 -include("records.hrl").
 
 setup() ->
@@ -29,3 +29,9 @@ read_lines({ok, Line},File) ->
    % io:format("~p~n",[Planemo]),
    ets:insert(planemos, Planemo),
    read_lines(file:read_line(File), File).
+
+persist() ->
+   {ok, planets} = dets:open_file(planets, [{keypos, #planemo.name},
+                                            {auto_save, 10000}]),
+   ok = dets:insert(planets, ets:tab2list(planemos)),
+   ok = dets:close(planets).

@@ -1,9 +1,12 @@
 -module(mph_drop).
--export([mph_drop/0]).
+-export([mph_drop/0, mph_drop/1]).
 
 mph_drop() ->
+   mph_drop(ets).
+
+mph_drop(Store) ->
    process_flag(trap_exit,true),
-   Drop=spawn_link(dropsrv,drop,[]),
+   Drop=spawn_link(dropsrv,drop,[Store]),
    convert(Drop).
 
 convert(Drop) ->

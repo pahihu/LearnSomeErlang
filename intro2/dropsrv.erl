@@ -15,7 +15,13 @@ setup(ets) ->
 
 setup(dets) ->
    {ok, T} = dets:open_file("planets"),
-   (fun(Key) -> dets:lookup(T, Key) end).
+   (fun(Key) -> dets:lookup(T, Key) end);
+
+setup(mnesia) ->
+   (fun(Key) ->
+      {atomic, R} = mnesia:transaction(fun() -> mnesia:read(planemo,Key) end),
+      R
+    end).
 
 handle_drops(Lookup) ->
    receive
@@ -28,7 +34,7 @@ fall_velocity(Planemo, Distance, Lookup) when Distance >= 0 ->
    Gravity = case Lookup(Planemo) of
       [] ->
          9.8;
-      [P] ->
+      [P | _] ->
          P#planemo.gravity
    end,
    math:sqrt(2 * Gravity * Distance).

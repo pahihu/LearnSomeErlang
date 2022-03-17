@@ -1,6 +1,8 @@
 -module(planemo_storage).
--export([setup/0, persist/0]).
+-export([setup/0, make_dets/0, make_mnesia/0]).
+-export([query/0, query/1]).
 -include("records.hrl").
+-include_lib("stdlib/include/qlc.hrl").
 
 setup() ->
    setup(ets:info(planemos)).
@@ -30,8 +32,30 @@ read_lines({ok, Line},File) ->
    ets:insert(planemos, Planemo),
    read_lines(file:read_line(File), File).
 
-persist() ->
+make_dets() ->
    {ok, planets} = dets:open_file(planets, [{keypos, #planemo.name},
                                             {auto_save, 10000}]),
    ok = dets:insert(planets, ets:tab2list(planemos)),
    ok = dets:close(planets).
+
+make_mnesia() ->
+   mnesia:create_schema([node()]),
+   mnesia:start(),
+   mnesia:create_table(planemo, [{attributes, record_info(fields, planemo)}]),
+   mnesia:transaction(fun() ->
+                         lists:foreach(fun(T) -> ok = mnesia:write(T) end,
+                                       ets:tab2list(planemos))
+                      end).
+
+query() ->
+   query(9.8).
+
+query(Gravity) ->
+   mnesia:transaction(
+      fun() ->
+         qlc:e(
+            qlc:q( [{X#planemo.name, X#planemo.gravity} || X <- mnesia:table(planemo),
+                         X#planemo.gravity < Gravity] )
+         )
+      end
+   ).

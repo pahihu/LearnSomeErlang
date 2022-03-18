@@ -13,11 +13,6 @@ create_table(undefined) ->
 create_table(Any) ->
    ok.
 
-load_data(FileName) ->
-   {ok, File} = file:open(FileName, [read]),
-   read_lines(file:read_line(File), File),
-   ok = file:close(File).
-
 split(Str, Sep) ->
    [A, B, C] = re:split(Str, Sep, [{return, list}]),
    {list_to_integer(A), list_to_integer(B), list_to_integer(C)}.
@@ -27,6 +22,11 @@ date_to_tuple(Date) ->
 
 time_to_tuple(Time) ->
    split(Time, ":").
+
+load_data(FileName) ->
+   {ok, File} = file:open(FileName, [read]),
+   read_lines(file:read_line(File), File),
+   ok = file:close(File).
 
 read_lines(eof, File) ->
    ok;
@@ -52,21 +52,23 @@ elapsed_minutes(StartDT, EndDT) ->
    (T1-T0 + 59) div 60.
 
 
-summarize(Number ) ->
-   Recs = ets:lookup(calls, Number),
-   Minutes = lists:foldl(fun(#call{number=Number,
-                                   start_date=SD, start_time=ST,
-                                   end_date=ED, end_time=ET}
-                              ,A) ->
-                           A + elapsed_minutes({SD,ST}, {ED,ET})
-                         end,
-                         0,
-                         Recs),
-   {Number, Minutes}.
+sum_minutes(Recs) ->
+   lists:foldl(fun(#call{number=Number,
+                         start_date=SD, start_time=ST,
+                         end_date=ED, end_time=ET}
+                   ,A) ->
+                  A + elapsed_minutes({SD,ST}, {ED,ET})
+               end,
+               0,
+               Recs).
+
+
+calls_for(Number) ->
+   Recs = ets:lookup(calls, Number).
 
 
 summary(Number) ->
-   [summarize(Number)].
+   [Number, sum_minutes(calls_for(Number))].
 
 
 summary() ->
@@ -75,5 +77,6 @@ summary() ->
 traverse('$end_of_table', Result) ->
    Result;
 traverse(Number, Result) ->
-   traverse(ets:next(calls, Number), [summarize(Number) | Result]).
+   traverse(ets:next(calls, Number),
+            [{Number, sum_minutes(calls_for(Number))} | Result]).
 

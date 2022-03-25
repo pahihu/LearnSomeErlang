@@ -66,35 +66,40 @@ code_change(_OldVsn, State, _Extra) ->
 
 %%% Internal functions
 
+number_to_list(N) when is_integer(N) ->
+   integer_to_list(N);
+number_to_list(N) ->
+   float_to_list(N, [{decimals, 3}]).
+
 most_recent(L) when length(L) < 3 ->
    L;
 most_recent(L) ->
    {Recent, _} = lists:split(2, L),
    Recent.
 
-weather(Code, State) ->
+weather({Lat, Lon}, _State) when is_number(Lat), is_number(Lon) ->
+   Params = number_to_list(Lat) ++ "," ++ number_to_list(Lon),
+   query(Params);
+weather(Code, State) when is_list(Code) ->
    case dets:lookup(State#state.table, Code) of
       {error, Reason} ->
          {error, Reason};
       [#station{id = Code, lat = Lat, lon = Lon} | _] ->
-         Url = "http://api.weatherunlocked.com/api/current/" ++
-               Lat ++ "," ++ Lon ++
-               "?app_id=" ++ ?APP_ID ++
-               "&app_key=" ++ ?APP_KEY,
-         query(Url)
-   end.
+         Params = Lat ++ "," ++ Lon,
+         query(Params)
+   end;
+weather(Zip, _State) when is_number(Zip) ->
+   Params = "us." ++ integer_to_list(Zip),
+   query(Params).
 
-weather(Zip) ->
-   Url = "http://api.weatherunlocked.com/api/current/us." ++
-         integer_to_list(Zip) ++
+query(Params) ->
+   Url = "http://api.weatherunlocked.com/api/current/" ++
+         Params ++
          "?app_id=" ++ ?APP_ID ++
          "&app_key=" ++ ?APP_KEY,
-   query(Url).
-
-query(Url) ->
    Ans = httpc:request(get, {Url, [{"Accept", "text/xml"}]}, [], []),
    case Ans of
-      {ok, {Code, Headers, Contents}} ->
+      {ok, {_Code, _Headers, Contents}} ->
          analyze_info(Contents);
       {error, Info} ->
          {error, Info}

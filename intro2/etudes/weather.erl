@@ -7,6 +7,7 @@
          handle_info/2,
          terminate/2,
          code_change/3]).  % gen_server callbacks
+-export([report/1, recent/0, connect/1]).
 -define(SERVER, ?MODULE).  % macro that just defines this module as server
 -record(state, {recent}).  % recent calls
 
@@ -17,8 +18,17 @@
 %%% convenience method for startup
 
 start_link() ->
-   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+   gen_server:start_link({global, ?SERVER}, ?MODULE, [], []).
 
+report(Zip) ->
+   gen_server:call({global, weather}, Zip).
+
+recent() ->
+   {ok, Recent} = gen_server:call({global, weather}, 0),
+   Recent.
+
+connect(Node) ->
+   net_adm:ping(Node).
 
 %%% gen_server callbacks
 
@@ -28,8 +38,14 @@ init([]) ->
 
 handle_call(_Request, _From, State) ->
    Zip = _Request,
-   Reply = {ok, weather(Zip)},
-   NewState = #state{ recent=most_recent([Zip|State#state.recent]) },
+   case Zip of
+      0 ->
+         Reply = {ok, State#state.recent},
+         NewState = State;
+      _ ->
+         Reply = {ok, weather(Zip)},
+         NewState = #state{ recent=most_recent([Zip|State#state.recent]) }
+   end,
    {reply, Reply, NewState}.
 
 handle_cast(_Msg, State) ->

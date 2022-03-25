@@ -1,0 +1,1 @@
+-record(station, {id, lat, lon}).

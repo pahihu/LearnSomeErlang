@@ -1,17 +1,18 @@
 -module(weather).
 -behaviour(gen_server).
--export([start_link/0]).   % convenience call for startup
+-export([start_link/0]).         % convenience call for startup
 -export([init/1,
          handle_call/3,
          handle_cast/2,
          handle_info/2,
          terminate/2,
-         code_change/3]).  % gen_server callbacks
+         code_change/3]).        % gen_server callbacks
 -export([report/1, recent/0, connect/1]).
--define(SERVER, ?MODULE).  % macro that just defines this module as server
--record(state, {recent}).  % recent calls
+-define(SERVER, ?MODULE).        % macro that just defines this module as server
+-record(state, {recent, table}). % recent calls, table
 
 -include_lib("xmerl/include/xmerl.hrl").
+-include("weather_records.hrl").
 -include("wuapi.hrl").
 
 
@@ -24,7 +25,7 @@ report(Zip) ->
    gen_server:call({global, weather}, Zip).
 
 recent() ->
-   {ok, Recent} = gen_server:call({global, weather}, 0),
+   {ok, Recent} = gen_server:call({global, weather}, ""),
    Recent.
 
 connect(Node) ->
@@ -34,17 +35,18 @@ connect(Node) ->
 
 init([]) ->
    application:start(inets),
-   {ok, #state{recent=[]}}.
+   {ok, Tab} = dets:open_file("stations"),
+   {ok, #state{recent=[], table=Tab}}.
 
 handle_call(_Request, _From, State) ->
-   Zip = _Request,
-   case Zip of
-      0 ->
+   Code = _Request,
+   case Code of
+      [] ->
          Reply = {ok, State#state.recent},
          NewState = State;
       _ ->
-         Reply = {ok, weather(Zip)},
-         NewState = #state{ recent=most_recent([Zip|State#state.recent]) }
+         Reply = {ok, weather(Code, State)},
+         NewState = State#state{ recent=most_recent([Code|State#state.recent]) }
    end,
    {reply, Reply, NewState}.
 
@@ -70,11 +72,26 @@ most_recent(L) ->
    {Recent, _} = lists:split(2, L),
    Recent.
 
+weather(Code, State) ->
+   case dets:lookup(State#state.table, Code) of
+      {error, Reason} ->
+         {error, Reason};
+      [#station{id = Code, lat = Lat, lon = Lon} | _] ->
+         Url = "http://api.weatherunlocked.com/api/current/" ++
+               Lat ++ "," ++ Lon ++
+               "?app_id=" ++ ?APP_ID ++
+               "&app_key=" ++ ?APP_KEY,
+         query(Url)
+   end.
+
 weather(Zip) ->
    Url = "http://api.weatherunlocked.com/api/current/us." ++
          integer_to_list(Zip) ++
          "?app_id=" ++ ?APP_ID ++
          "&app_key=" ++ ?APP_KEY,
+   query(Url).
+
+query(Url) ->
    Ans = httpc:request(get, {Url, [{"Accept", "text/xml"}]}, [], []),
    case Ans of
       {ok, {Code, Headers, Contents}} ->

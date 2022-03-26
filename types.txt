@@ -230,3 +230,31 @@ https://github.com/uhub/awesome-erlang  (current)
  a) immediately after a disaster or
  b) at the start of a new project"
                                        Joe Armstrong
+
+https://lfe.io/learn/   Resources for Learning LFE
+--- LFE ---
+   The LFE Tutorial
+   Casting SPELs in LFE
+   SICP LFE edition
+
+--- Erlang & OTP ---
+   F.Hebert: "Learn You Some Erlang for Great Good!"
+   F.Cesarini, S.Vinoski: "Designing for Scalability with Erlang/OTP"
+   M.Logan, E.Merritt, R.Carlsson: "Erlang and OTP in Action"
+
+--- In Production ---
+   https://adoptingerlang.org  Adopting Erlang
+      T.Sloughter, F.Hebert, E.Vigil-McClanahan
+   https://erlang-in-anger.com  Erlang in Anger
+      F.Hebert
+
+--- Lisp Internals ---
+   Ch.Queinnec: "Lisp in Small Pieces"
+   D.Hoyte: "Let Over Lambda"
+
+--- Lisp Reference ---
+   http://www.lispworks.com/documentation/HyperSpec/Front/Contents.htm
+      Common Lisp Hyperspec
+   http://www.softwarepreservation.org/projects/LISP/MIT/Moon-MACLISP_Reference_Manual-Apr_08_1974.pdf
+      The Moonual
+

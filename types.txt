@@ -166,3 +166,67 @@ dbg:p(all,c)   % calls
 dbg:tpl(M,F,A)
 dbg:stop()
 dbg:stop_clear()
+
+
+Moving beyond the Erlang shell
+------------------------------
+- make module, Emakefile, erl -make
+https://erlang.org/doc/man/escript.html  escript
+https://www.rebar3.org  rebar3
+https://erlide.org  erlide
+
+
+Input and Output
+----------------
+- file, filename, filelib, io_lib modules
+- gen_tcp, gen_udp, inet modules
+
+
+Testing, Analyzing, and Refactoring
+-----------------------------------
+- EUnit framework for unit testing, Common Test framework for system testing
+- Dialyzer, the discrepancy analyzer
+- profilers and coverage tools: eprof, fprof, cover modules, cprof tool
+https://github.com/RefactoringTools/wrangler  Wrangler - refactoring
+
+
+Networking and the Web
+----------------------
+https://github.com/ninenines/cowboy  Cowboy - webserver
+http://yaws.hyber.org  Yaws - webserver
+https://github.com/mochi/mochiweb  MochiWeb
+   lib for building lightweight HTTP servers
+https://nitrogenproject.com  Nitrogen Web Framework
+   develop interactive web apps in full-stack Erlang
+https://github.com/basho/webmachine/  webmachine
+   REST-based system for building web apps
+https://github.com/basho/webmachine/wiki/Diagram  webmachine flow processing
+
+
+Data Storage
+------------
+https://couchdb.apache.org  CouchDB
+https://riak.com/products/#riak  Riak
+
+
+Extending Erlang
+----------------
+`Erlang Programming' explores Java, C, Ruby, also notes approaches to connect
+with .NET languages, Python, Perl, PHP, Haskell, Scheme, and Emacs Lisp.
+
+
+Languages Built on Erlang
+-------------------------
+http://elixir-lang.org  Elixir
+   dynamic, functional language
+https://lfe.io  LFE - Lisp Falvoured Erlang
+
+
+https://github.com/drobakowski/awesome-erlang   Awesome Erlang (2018)
+https://github.com/uhub/awesome-erlang  (current)
+
+
+"New technologies have their best chance 
+ a) immediately after a disaster or
+ b) at the start of a new project"
+                                       Joe Armstrong

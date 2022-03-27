@@ -1,4 +1,6 @@
 
+q() -> init:stop() -> stop(0) -> halt(0) -> halt(int | "crash.dump" | abort, [])
+
 size/1   - tuple/byte/bit size
 tuple_size/1   {4,2}
 byte_size/1    <<"42">>

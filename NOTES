@@ -13,23 +13,37 @@ f(X) when cond1, cond2, ...   % all cond must succeed
 % Guards
 is_atom(X)
    hello, 'hello'
+is_binary(X)
+is_constant(X)
 is_float(X)
    1.2 3.0e10
+is_function(X)
+is_function(X,Arity)
 is_integer(X)
    42 $a 16#2A 2#101010
 is_list(X)
    [alpha, 2]
+is_map(X)
 is_number(X)
 is_pid(X)
+is_pmod(X)
+   parametrized module
 is_port(X)
 is_reference(X)
 is_tuple(X)
    {1, 2, 3}
+is_record(X,Tag)
+is_record(X,Tag,Size)
 
 
 % also allowed in guards
-float round trunc
+abs float round trunc
 hd tl length
+byte_size tuple_size
+
+node()
+node(X)
+   node on which X was created, X is process, ident, ref, port
 
 self()
    current process Pid

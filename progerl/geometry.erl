@@ -5,6 +5,10 @@ area({rectangle, Width, Height}) ->
    Width * Height;
 area({circle, Radius}) ->
    math:pi() * Radius * Radius;
+area({right_triangle, A, B, C}) when A + B > C,
+                                     B + C > A,
+                                     C + A > B ->
+   A * B / 2;
 area(T = {triangle, A, B, C}) when A + B > C,
                                    B + C > A,
                                    C + A > B ->
@@ -17,7 +21,8 @@ perimeter({rectangle, Width, Height}) ->
    2 * (Width + Height);
 perimeter({circle, Radius}) ->
    2 * math:pi() * Radius;
-perimeter({triangle, A, B, C}) ->
+perimeter({Triangle, A, B, C}) when Triangle == triangle; 
+                                    Triangle == right_triangle ->
    A + B + C;
 perimeter({square, Side}) ->
    4 * Side.

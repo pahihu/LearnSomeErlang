@@ -23,6 +23,12 @@
 -export([isoformat/1]).
 -export([ctime/1]).
 
+
+%% --- time ---
+-export([time/0, time/1, time/2, time/3, time/4, time/5]).
+-export([hour/1, minute/1, second/1, microsecond/1, tzinfo/1]).
+-export([utcoffset/1,dst/1]).
+
 -export([test_timedelta/0]).
 -export([test_date/0]).
 -export([test/0]).
@@ -36,7 +42,7 @@ idiv(A, B) ->
 mod(A, B) ->
    A - idiv(A, B) * B.
 
-params() ->
+td_params() ->
    [{        days, 1,    1},
     {     seconds, 2,    1},
     {microseconds, 3,    1},
@@ -45,7 +51,7 @@ params() ->
     {       hours, 2, 3600},
     {       weeks, 1,   7}].
 
-normalize({Days, Seconds, Microseconds}) ->
+td_normalize({Days, Seconds, Microseconds}) ->
    U = trunc(Microseconds),
    S = trunc(Seconds + idiv(U, 1000000)),
    D = trunc(Days + idiv(S, 86400)),
@@ -54,7 +60,7 @@ normalize({Days, Seconds, Microseconds}) ->
                mod(U, 1000000)}.
 
 timedelta(Days) when is_number(Days) ->
-   normalize({Days, 0, 0});
+   td_normalize({Days, 0, 0});
 
 timedelta(H) when is_map(H) ->
    L = lists:map(fun({What, Pos, Mult}) ->
@@ -64,19 +70,19 @@ timedelta(H) when is_map(H) ->
                   2 -> {  0, Val,   0};
                   3 -> {  0, Val, Val}
                end
-             end, params()),
+             end, td_params()),
    T = lists:foldl(fun({D, S, U}, {AccD, AccS, AccU}) ->
                   {D + AccD, S + AccS, U + AccU}
                end,
                {0, 0, 0}, L),
-   normalize(T).
+   td_normalize(T).
 
 
 timedelta(Days, Seconds) ->
-   normalize({Days, Seconds, 0}).
+   td_normalize({Days, Seconds, 0}).
 
 timedelta(Days, Seconds, Microseconds) ->
-   normalize({Days, Seconds, Microseconds}).
+   td_normalize({Days, Seconds, Microseconds}).
 
 timedelta(Days, Seconds, Microseconds, Milliseconds) ->
    timedelta(Days, Seconds, Microseconds + 1000 * Milliseconds).
@@ -115,29 +121,29 @@ microseconds({timedelta, _Days, _Seconds, Micros}) ->
 
 
 add({timedelta, D1, S1, U1}, {timedelta, D2, S2, U2}) ->
-   normalize({D1 + D2, S1 + S2, U1 + U2});
+   td_normalize({D1 + D2, S1 + S2, U1 + U2});
 add(Date, {timedelta, D, _S, _U}) ->
    fromordinal(toordinal(Date) + D).
 
 
 sub({timedelta, D1, S1, U1}, {timedelta, D2, S2, U2}) ->
-   normalize({D1 - D2, S1 - S2, U1 - U2});
+   td_normalize({D1 - D2, S1 - S2, U1 - U2});
 sub(Date, {timedelta, D, _S, _U}) ->
    fromordinal(toordinal(Date) - D);
 sub(Date1, Date2) ->
    timedelta(toordinal(Date1) - toordinal(Date2)).
 
 scale({timedelta, D, S, U}, N) ->
-   normalize({N * D, N * S, N * U}).
+   td_normalize({N * D, N * S, N * U}).
 
 divide({timedelta, D, S, U}, N) ->
-   normalize({D / N, S / N, U / N}).
+   td_normalize({D / N, S / N, U / N}).
 
 negate({timedelta, D, S, U}) ->
-   normalize({-D, -S, -U}).
+   td_normalize({-D, -S, -U}).
 
 magnitude({timedelta, D, S, U}) ->
-   normalize({abs(D), abs(S), abs(U)}).
+   td_normalize({abs(D), abs(S), abs(U)}).
 
 
 two_digit(N) ->
@@ -149,8 +155,6 @@ two_digit(N) ->
    end.
 
 str({timedelta, D, S, U}) ->
-   SS = S rem 60,  M = S div 60,
-   MM = M rem 60, HH = M div 60,
    Ret1 = integer_to_list(D),
    Ret2 = if
       abs(D) > 1 ->
@@ -158,6 +162,8 @@ str({timedelta, D, S, U}) ->
       true ->
          Ret1 ++ " day, "
    end,
+   SS = S rem 60,  M = S div 60,
+   MM = M rem 60, HH = M div 60,
    Ret3 = Ret2 ++ integer_to_list(HH)
                ++ ":" ++ two_digit(MM)
                ++ ":" ++ two_digit(SS),
@@ -182,11 +188,11 @@ today() ->
    {date, erlang:date()}.
 
 fromtimestamp({Megasecs, Secs, _Micros}) ->
-   % 719528 = toordinal(date(1970,1,1))
-   fromordinal(719528 + (Megasecs * 1000000 + Secs) div 86400).
+   % 719163 = toordinal(date(1970,1,1))
+   fromordinal(719163 + (Megasecs * 1000000 + Secs) div 86400).
 
 fromordinal(Days) ->
-   {date, ymd(Days)}.
+   {date, ymd(365 + Days)}.
    
 
 date_min() ->
@@ -213,13 +219,20 @@ replace({date, {Y, M, D}}, H) when is_map(H) ->
    NewY = maps:get(year, H, Y),
    NewM = maps:get(month, H, M),
    NewD = maps:get(day, H, D),
-   date(NewY, NewM, NewD).
+   date(NewY, NewM, NewD);
+replace({time, {HH, M, S, U, TZ}}, H) when is_map(H) ->
+   NewH = maps:get(hour, H, HH),
+   NewM = maps:get(hour, H, M),
+   NewS = maps:get(hour, H, S),
+   NewU = maps:get(hour, H, U),
+   NewTZ = maps:get(hour, H, TZ),
+   time(NewH,NewM,NewS,NewU,NewTZ).
 
 timetuple(Date = {date, {Y, M, D}}) ->
    {Y, M, D, 0, 0, 0, weekday(Date), yday(Date), -1}.
 
 toordinal({date, YMD}) ->
-   calendar:date_to_gregorian_days(YMD).
+   calendar:date_to_gregorian_days(YMD) - 365.
 
 weekday(Date) ->
    isoweekday(Date) - 1.
@@ -235,7 +248,31 @@ isocalendar(Date = {date, YMD}) ->
    {IsoY, IsoWeek, isoweekday(Date)}.
 
 isoformat({date, {Y, M, D}}) ->
-   integer_to_list(Y) ++ "-" ++ two_digit(M) ++ "-" ++ two_digit(D).
+   integer_to_list(Y) ++ "-" ++ two_digit(M) ++ "-" ++ two_digit(D);
+isoformat(T = {time, {H, M, S, U, TZ}}) ->
+   Ret1 = two_digit(H) ++ ":" ++ two_digit(M) ++ ":" ++ two_digit(S),
+   Ret2 = if
+      0 /= U ->
+         Ret1 ++ "." ++ U;
+      true ->
+         Ret1
+   end,
+   if
+      TZ /= undefined ->
+         TZMinutes = seconds(utcoffset(T)) div 60,
+         TZ_MM = TZMinutes rem 60, TZ_HH = TZMinutes div 60,
+         if
+            TZMinutes < 0 ->
+               Ret2 ++ "-" ++ two_digit(TZ_HH)
+                    ++ ":" ++ two_digit(TZ_MM);
+            true ->
+               Ret2 ++ "+" ++ two_digit(TZ_HH)
+                    ++ ":" ++ two_digit(TZ_MM)
+         end;
+      true ->
+         Ret2
+   end.
+      
 
 days() ->
    ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].
@@ -251,6 +288,58 @@ ctime(Date = {date, {Y, M, D}}) ->
       ++ " " ++ integer_to_list(D)
       ++ " 00:00:00 "
       ++ integer_to_list(Y).
+
+
+%% --- time ---
+
+t_normalize({Hours,Minutes,Seconds,Microseconds,TZInfo}) ->
+   U = trunc(Microseconds),
+   S = trunc(Seconds + idiv(U, 1000000)),
+   M = trunc(Minutes + idiv(S, 60)),
+   H = trunc(Hours + idiv(M, 60)),
+   {time, {mod(H, 24),
+           mod(M, 60), 
+           mod(S, 60), 
+           mod(U, 1000000),
+           TZInfo}}.
+
+time() ->
+   time(0).
+time(Hour) when is_number(Hour) ->
+   time(Hour,0);
+time(H) when is_map(H) ->
+   HH = maps:get(hour,H,0),
+   M = maps:get(minute,H,0),
+   S = maps:get(second,H,0),
+   U = maps:get(microsecond,H,0),
+   TZ = maps:get(tzinfo,H,undefined),
+   t_normalize({HH,M,S,U,TZ}).
+time(Hour,Minute) ->
+   time(Hour,Minute,0).
+time(Hour,Minute,Second) ->
+   time(Hour,Minute,Second,0).
+time(Hour,Minute,Second,Microsecond) ->
+   time(Hour,Minute,Second,Microsecond,undefined).
+time(Hour,Minute,Second,Microsecond,TZInfo) ->
+   t_normalize({Hour,Minute,Second,Microsecond,TZInfo}).
+
+   
+
+       hour({time, {H, _M, _S, _U, _TZ}}) -> H.
+     minute({time, {_H, M, _S, _U, _TZ}}) -> M.
+     second({time, {_H, _M, S, _U, _TZ}}) -> S.
+microsecond({time, {_H, _M, _S, U, _TZ}}) -> U.
+     tzinfo({time, {_H, _M, _S, _U, TZ}}) -> TZ.
+
+utcoffset(T) ->
+   case tzinfo(T) of
+      undefined ->
+         undefined;
+      X -> % expect in seconds
+         timedelta(0, X)
+   end.
+
+dst({time, _P}) -> timedelta(0).
 
 
 %% --- tests ---
@@ -293,10 +382,26 @@ test_date() ->
          MyBirthday
    end,
    TimeToBirthday = magnitude(sub(MyBirthday2, OldToday)),
-   202 = days(TimeToBirthday).
+   202 = days(TimeToBirthday),
+   Date2 = fromordinal(730920),
+   Date2 = date(2002,3,11),
+   {2002, 3, 11, 0, 0, 0, 0, 70, -1} = timetuple(Date2),
+   {2002, 11, 1} = isocalendar(Date2),
+   "2002-03-11" = isoformat(Date2).
+
+test_time() ->
+   T = time(#{hour => 12, minute => 10, second => 30, tzinfo => 3600}),
+   "12:10:30+01:00" = isoformat(T),
+   12 = hour(T),
+   10 = minute(T),
+   30 = second(T),
+   3600 = tzinfo(T),
+   TD = timedelta(0),
+   TD = dst(T).
 
 
 test() ->
    test_timedelta(),
-   test_date().
+   test_date(),
+   test_time().
    

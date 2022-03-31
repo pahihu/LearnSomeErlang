@@ -1,4 +1,6 @@
 -module(datetime).
+-define(MAX_YEAR, 9999).
+
 %% --- timedelta ---
 -export([timedelta/1,
          timedelta/2,
@@ -15,7 +17,7 @@
 
 
 %% --- date ---
--export([date/3, today/0, fromtimestamp/1, fromordinal/1]).
+-export([date/1, date/3, today/0, fromtimestamp/1, fromordinal/1]).
 -export([date_min/0, date_max/0, date_resolution/0]).
 -export([year/1, month/1, day/1]).
 -export([replace/2, timetuple/1, toordinal/1]).
@@ -28,6 +30,17 @@
 -export([time/0, time/1, time/2, time/3, time/4, time/5]).
 -export([hour/1, minute/1, second/1, microsecond/1, tzinfo/1]).
 -export([utcoffset/1,dst/1]).
+
+
+%% --- datetime ---
+-export([datetime/0, datetime/1, datetime/2, datetime/3]).
+-export([datetime/4, datetime/5, datetime/6, datetime/7, datetime/8]).
+-export([utcnow/0, utcfromtimestamp/1]).
+-export([combine/2]).
+-export([datetime_min/0, datetime_max/0, datetime_resolution/0]).
+-export([timetz/1, astimezone/2]).
+-export([utctimetuple/1]).
+
 
 -export([test_timedelta/0]).
 -export([test_date/0]).
@@ -68,7 +81,7 @@ timedelta(H) when is_map(H) ->
                case Pos of
                   1 -> {Val,   0,   0};
                   2 -> {  0, Val,   0};
-                  3 -> {  0, Val, Val}
+                  3 -> {  0,   0, Val}
                end
              end, td_params()),
    T = lists:foldl(fun({D, S, U}, {AccD, AccS, AccU}) ->
@@ -184,6 +197,14 @@ total_seconds({timedelta, D, S, U}) ->
 date(Y, M, D) ->
    {date, {Y, M, D}}.
 
+date(Opts) when is_map(Opts) ->
+   Y = maps:get(year,Opts,1),
+   M = maps:get(month,Opts,1),
+   D = maps:get(day,Opts,1),
+   date(Y,M,D);
+date({datetime, D, _T}) ->
+   D.
+
 today() ->
    {date, erlang:date()}.
 
@@ -199,7 +220,7 @@ date_min() ->
    date(0, 1, 1).
 
 date_max() ->
-   date(9999, 12, 31).
+   date(?MAX_YEAR, 12, 31).
 
 date_resolution() ->
    timedelta(1).
@@ -208,11 +229,14 @@ date_resolution() ->
 ymd(Days) ->
    calendar:gregorian_days_to_date(Days).
 
-year({date, {Y, _M, _D}}) -> Y.
+year({date, {Y, _M, _D}}) -> Y;
+year({datetime, D, _T}) -> year(D).
 
-month({date, {_Y, M, _D}}) -> M.
+month({date, {_Y, M, _D}}) -> M;
+month({datetime, D, _T}) -> month(D).
 
-day({date, {_Y, _M, D}}) -> D.
+day({date, {_Y, _M, D}}) -> D;
+day({datetime, D, _T}) -> day(D).
 
 
 replace({date, {Y, M, D}}, H) when is_map(H) ->
@@ -222,14 +246,32 @@ replace({date, {Y, M, D}}, H) when is_map(H) ->
    date(NewY, NewM, NewD);
 replace({time, {HH, M, S, U, TZ}}, H) when is_map(H) ->
    NewH = maps:get(hour, H, HH),
-   NewM = maps:get(hour, H, M),
-   NewS = maps:get(hour, H, S),
-   NewU = maps:get(hour, H, U),
-   NewTZ = maps:get(hour, H, TZ),
-   time(NewH,NewM,NewS,NewU,NewTZ).
+   NewM = maps:get(minute, H, M),
+   NewS = maps:get(second, H, S),
+   NewU = maps:get(microsecond, H, U),
+   NewTZ = maps:get(tzinfo, H, TZ),
+   time(NewH,NewM,NewS,NewU,NewTZ);
+replace({datetime, D, T}, H) when is_map(H) ->
+   {timedate, replace(D, H), replace(T, H)}.
 
 timetuple(Date = {date, {Y, M, D}}) ->
-   {Y, M, D, 0, 0, 0, weekday(Date), yday(Date), -1}.
+   {Y, M, D, 0, 0, 0, weekday(Date), yday(Date), -1};
+timetuple({datetime, D, T}) ->
+   T1 = timetuple(D),
+   T2 = setelement(4, T1, hour(T)),
+   T3 = setelement(5, T2, minute(T)),
+   T4 = setelement(6, T3, second(T)),
+   Dst = case tzinfo(T) of
+      undefined ->
+         -1;
+      _X ->
+         DstSec = seconds(dst(T)),
+         if
+            DstSec /= 0 -> 1;
+            true        -> 0
+         end
+   end,
+   setelement(9, T4, Dst).
 
 toordinal({date, YMD}) ->
    calendar:date_to_gregorian_days(YMD) - 365.
@@ -306,7 +348,7 @@ t_normalize({Hours,Minutes,Seconds,Microseconds,TZInfo}) ->
 time() ->
    {_YMD1,{ H,  M,   S}} = calendar:local_time(),
    {_YMD2,{HU, MU, _MS}} = calendar:universal_time(),
-   TZOffset = ((H - HU) * 60 + (M - MU)) * 60,
+   TZOffset = (H - HU) * 60 + M - MU,
    t_normalize({H, M, S, 0, TZOffset}).
 time(Hour) when is_number(Hour) ->
    time(Hour,0);
@@ -316,7 +358,11 @@ time(H) when is_map(H) ->
    S = maps:get(second,H,0),
    U = maps:get(microsecond,H,0),
    TZ = maps:get(tzinfo,H,undefined),
-   t_normalize({HH,M,S,U,TZ}).
+   t_normalize({HH,M,S,U,TZ});
+time({HH, MM, SS}) when is_number(HH), is_number(MM), is_number(SS) ->
+   time(HH,MM,SS);
+time({datetime, _D, T}) ->
+   replace(T, #{tzinfo => undefined}).
 time(Hour,Minute) ->
    time(Hour,Minute,0).
 time(Hour,Minute,Second) ->
@@ -328,21 +374,87 @@ time(Hour,Minute,Second,Microsecond,TZInfo) ->
 
    
 
-       hour({time, {H, _M, _S, _U, _TZ}}) -> H.
-     minute({time, {_H, M, _S, _U, _TZ}}) -> M.
-     second({time, {_H, _M, S, _U, _TZ}}) -> S.
-microsecond({time, {_H, _M, _S, U, _TZ}}) -> U.
-     tzinfo({time, {_H, _M, _S, _U, TZ}}) -> TZ.
+hour({time, {H, _M, _S, _U, _TZ}}) -> H;
+hour({datetime, _D, T}) -> hour(T).
+
+minute({time, {_H, M, _S, _U, _TZ}}) -> M;
+minute({datetime, _D, T}) -> minute(T).
+
+second({time, {_H, _M, S, _U, _TZ}}) -> S;
+second({datetime, _D, T}) -> second(T).
+
+microsecond({time, {_H, _M, _S, U, _TZ}}) -> U;
+microsecond({datetime, _D, T}) -> microsecond(T).
+
+tzinfo({time, {_H, _M, _S, _U, TZ}}) -> TZ;
+tzinfo({datetime, _D, T}) -> tzinfo(T).
 
 utcoffset(T) ->
    case tzinfo(T) of
       undefined ->
          undefined;
-      X -> % expect in seconds
-         timedelta(0, X)
+      X -> % expect in minutes
+         timedelta(0, 60*X)
    end.
 
-dst({time, _P}) -> timedelta(0).
+dst({time, _P}) -> timedelta(0, 3600);
+dst({datetime, _D, _T}) -> timedelta(0, 3600).
+
+
+%% --- datetime ---
+
+datetime() ->
+   {datetime, today(), datetime:time()}.
+datetime(Year) when is_number(Year) ->
+   datetime(Year, 1);
+datetime(H) when is_map(H) ->
+   {timedate,date(H),time(H)}.
+datetime(Year,Month) ->
+   datetime(Year,Month,1).
+datetime(Year,Month,Day) ->
+   datetime(Year,Month,Day,0).
+datetime(Year,Month,Day,Hour) ->
+   datetime(Year,Month,Day,Hour,0).
+datetime(Year,Month,Day,Hour,Minute) ->
+   datetime(Year,Month,Day,Hour,Minute,0).
+datetime(Year,Month,Day,Hour,Minute,Second) ->
+   datetime(Year,Month,Day,Hour,Minute,Second,0).
+datetime(Year,Month,Day,Hour,Minute,Second,Microsecond) ->
+   datetime(Year,Month,Day,Hour,Minute,Second,Microsecond,undefined).
+datetime(Year,Month,Day,Hour,Minute,Second,Microsecond,TZInfo) ->
+   {datetime,date(Year,Month,Day),time(Hour,Minute,Second,Microsecond,TZInfo)}.
+
+from_ymd_hms({{Y,M,D},{HH,MM,SS}}) ->
+   {datetime, date(Y,M,D), time(HH,MM,SS)}.
+
+utcnow() ->
+   from_ymd_hms(calendar:universal_time()).
+
+utcfromtimestamp(TimeStamp) ->
+  from_ymd_hms(calendar:now_to_local_time(TimeStamp)).
+
+combine(Date = {date, _D}, Time = {time, _T}) ->
+   {datetime, Date, Time}.
+
+datetime_min() ->
+   datetime(#{year => 1, month => 1, day => 1, tzinfo => undefined}).
+
+datetime_max() ->
+   datetime(?MAX_YEAR,12,31,23,59,59,999999,undefined).
+
+datetime_resolution() ->
+   timedelta(#{microseconds => 1}).
+
+timetz({datetime, _D, T}) -> T.
+
+astimezone(DateTime, TZInfo) ->
+   delta = timedelta(0, 60 * (tzinfo(DateTime) - TZInfo)),
+   replace(add(DateTime, delta), #{tzinfo => TZInfo}).
+
+utctimetuple({datetime, {date, D}, T}) ->
+   [{UD, UT} | _ ] = calendar:local_time_to_universal_time_dst({D,{hour(T),minute(T),second(T)}}),
+   Tuple = timetuple({datetime, {date, UD}, time(UT)}),
+   setelement(9, Tuple, 0).
 
 
 %% --- tests ---
@@ -393,12 +505,12 @@ test_date() ->
    "2002-03-11" = isoformat(Date2).
 
 test_time() ->
-   T = time(#{hour => 12, minute => 10, second => 30, tzinfo => 3600}),
+   T = time(#{hour => 12, minute => 10, second => 30, tzinfo => 60}),
    "12:10:30+01:00" = isoformat(T),
    12 = hour(T),
    10 = minute(T),
    30 = second(T),
-   3600 = tzinfo(T),
+   60 = tzinfo(T),
    TD = timedelta(0),
    TD = dst(T).
 

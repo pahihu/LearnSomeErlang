@@ -304,7 +304,10 @@ t_normalize({Hours,Minutes,Seconds,Microseconds,TZInfo}) ->
            TZInfo}}.
 
 time() ->
-   time(0).
+   {_YMD1,{ H,  M,   S}} = calendar:local_time(),
+   {_YMD2,{HU, MU, _MS}} = calendar:universal_time(),
+   TZOffset = ((H - HU) * 60 + (M - MU)) * 60,
+   t_normalize({H, M, S, 0, TZOffset}).
 time(Hour) when is_number(Hour) ->
    time(Hour,0);
 time(H) when is_map(H) ->
@@ -372,7 +375,7 @@ test_date() ->
    "2002-12-04" = isoformat(date(2002, 12, 4)),
    "Wed Dec 4 00:00:00 2002" = ctime(date(2002, 12, 4)),
    Today = today(),
-   Today = fromtimestamp(now()),
+   Today = fromtimestamp(erlang:timestamp()),
    OldToday = date(2007, 12, 5),
    MyBirthday = date(year(OldToday), 6, 24),
    MyBirthday2 = if

@@ -1,0 +1,2 @@
+-define(APP_ID,"<your APP_ID here>").
+-define(APP_KEY,"<your APP_KEY here>").

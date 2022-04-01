@@ -16,6 +16,7 @@
 -export([total_seconds/1]).
 -export([totimedelta/1]).
 -export([timedelta_to_date/1, timedelta_to_time/1, timedelta_to_datetime/1]).
+-export([less_than/2]).
 
 
 %% --- date ---
@@ -308,6 +309,9 @@ timedelta_to_time({timedelta, {_D, S, U}}) ->
 
 timedelta_to_datetime(TimeDelta = {timedelta, _Values}) ->
    {datetime, timedelta_to_date(TimeDelta), timedelta_to_time(TimeDelta)}.
+
+less_than(A, B) ->
+   totimedelta(A) < totimedelta(B).
 
 
 weekday(Date) ->

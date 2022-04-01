@@ -491,8 +491,8 @@ datetime_resolution() ->
 timetz({datetime, _D, T}) -> T.
 
 astimezone(DateTime, TZInfo) ->
-   delta = timedelta(0, 60 * (tzinfo(DateTime) - TZInfo)),
-   replace(add(DateTime, delta), #{tzinfo => TZInfo}).
+   Delta = timedelta(0, 60 * (tzinfo(DateTime) - TZInfo)),
+   replace(sub(DateTime, Delta), #{tzinfo => TZInfo}).
 
 utctimetuple({datetime, {date, D}, T}) ->
    [{UD, UT} | _ ] = calendar:local_time_to_universal_time_dst({D,{hour(T),minute(T),second(T)}}),
@@ -577,6 +577,13 @@ test_datetime() ->
    {2006, 11, 21, 17, 30, 0, 1, 325, -1} = timetuple(DateTime4),
    DateTime5 = add(DateTime2, timedelta(1)),
    {2006, 11, 22, 16, 30, 0, 2, 326, -1} = timetuple(DateTime5),
+   DateTime6 = replace(DateTime5, #{tzinfo => 120}),
+   {2006, 11, 22, 16, 30, 0, 2, 326, 1} = timetuple(DateTime6),
+   DateTime7 = astimezone(DateTime6, 60),
+   {2006, 11, 22, 15, 30, 0, 2, 326, 1} = timetuple(DateTime7),
+   GMT1 = sub(DateTime6, DateTime7),
+   DateTime8 = datetime(2006, 11, 22, 16, 30, 0, 0, undefined),
+   DateTime8 = add(DateTime7, GMT1),
    ok.
 
 

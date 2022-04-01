@@ -14,6 +14,8 @@
 -export([add/2, sub/2, scale/2, divide/2, negate/1, magnitude/1]).
 -export([str/1]).
 -export([total_seconds/1]).
+-export([totimedelta/1]).
+-export([timedelta_to_date/1, timedelta_to_time/1, timedelta_to_datetime/1]).
 
 
 %% --- date ---
@@ -41,7 +43,6 @@
 -export([timetz/1, astimezone/2]).
 -export([utctimetuple/1]).
 
-
 -export([test_timedelta/0]).
 -export([test_date/0]).
 -export([test/0]).
@@ -68,9 +69,9 @@ td_normalize({Days, Seconds, Microseconds}) ->
    U = trunc(Microseconds),
    S = trunc(Seconds + idiv(U, 1000000)),
    D = trunc(Days + idiv(S, 86400)),
-   {timedelta, D, 
-               mod(S, 86400), 
-               mod(U, 1000000)}.
+   {timedelta, {D,
+                mod(S, 86400),
+                mod(U, 1000000)}}.
 
 timedelta(Days) when is_number(Days) ->
    td_normalize({Days, 0, 0});
@@ -123,39 +124,45 @@ timedelta_resolution() ->
    timedelta(0, 0, 1).
 
 
-days({timedelta, Days, _Seconds, _Micros}) ->
+days({timedelta, {Days, _Seconds, _Micros}}) ->
    Days.
 
-seconds({timedelta, _Days, Seconds, _Micros}) ->
+seconds({timedelta, {_Days, Seconds, _Micros}}) ->
    Seconds.
 
-microseconds({timedelta, _Days, _Seconds, Micros}) ->
+microseconds({timedelta, {_Days, _Seconds, Micros}}) ->
    Micros.
 
 
-add({timedelta, D1, S1, U1}, {timedelta, D2, S2, U2}) ->
+add({timedelta, {D1, S1, U1}}, {timedelta, {D2, S2, U2}}) ->
    td_normalize({D1 + D2, S1 + S2, U1 + U2});
-add(Date, {timedelta, D, _S, _U}) ->
-   fromordinal(toordinal(Date) + D).
+add(Date = {date, _Values}, {timedelta, {D, _S, _U}}) ->
+   fromordinal(toordinal(Date) + D);
+add(DateTime = {datetime, _D, _T}, TimeDelta) ->
+   timedelta_to_datetime(add(totimedelta(DateTime), TimeDelta)).
 
 
-sub({timedelta, D1, S1, U1}, {timedelta, D2, S2, U2}) ->
+sub({timedelta, {D1, S1, U1}}, {timedelta, {D2, S2, U2}}) ->
    td_normalize({D1 - D2, S1 - S2, U1 - U2});
-sub(Date, {timedelta, D, _S, _U}) ->
+sub(DateTime1 = {datetime, _D1, _T1}, DateTime2 = {datetime, _D2, _T2}) ->
+   sub(totimedelta(DateTime1), totimedelta(DateTime2));
+sub(DateTime = {datetime, _D, _T}, TimeDelta) ->
+   timedelta_to_datetime(sub(totimedelta(DateTime), TimeDelta));
+sub(Date, {timedelta, {D, _S, _U}}) ->
    fromordinal(toordinal(Date) - D);
 sub(Date1, Date2) ->
    timedelta(toordinal(Date1) - toordinal(Date2)).
 
-scale({timedelta, D, S, U}, N) ->
+scale({timedelta, {D, S, U}}, N) ->
    td_normalize({N * D, N * S, N * U}).
 
-divide({timedelta, D, S, U}, N) ->
+divide({timedelta, {D, S, U}}, N) ->
    td_normalize({D / N, S / N, U / N}).
 
-negate({timedelta, D, S, U}) ->
+negate({timedelta, {D, S, U}}) ->
    td_normalize({-D, -S, -U}).
 
-magnitude({timedelta, D, S, U}) ->
+magnitude({timedelta, {D, S, U}}) ->
    td_normalize({abs(D), abs(S), abs(U)}).
 
 
@@ -167,7 +174,13 @@ two_digit(N) ->
          [$0 + (N div 10), $0 + (N rem 10)]
    end.
 
-str({timedelta, D, S, U}) ->
+hhmm(HH, MM) ->
+   two_digit(HH) ++ ":" ++ two_digit(MM).
+
+hhmmss(HH, MM, SS) ->
+   hhmm(HH, MM) ++ ":" ++ two_digit(SS).
+
+str({timedelta, {D, S, U}}) ->
    Ret1 = integer_to_list(D),
    Ret2 = if
       abs(D) > 1 ->
@@ -177,9 +190,7 @@ str({timedelta, D, S, U}) ->
    end,
    SS = S rem 60,  M = S div 60,
    MM = M rem 60, HH = M div 60,
-   Ret3 = Ret2 ++ integer_to_list(HH)
-               ++ ":" ++ two_digit(MM)
-               ++ ":" ++ two_digit(SS),
+   Ret3 = Ret2 ++ hhmmss(HH, MM, SS),
    if
       U > 0 ->
          Ret3 ++ "." ++ integer_to_list(U);
@@ -188,7 +199,7 @@ str({timedelta, D, S, U}) ->
    end.
 
 
-total_seconds({timedelta, D, S, U}) ->
+total_seconds({timedelta, {D, S, U}}) ->
    D * 86400 + S + U / 1.0e6.
 
 
@@ -252,7 +263,7 @@ replace({time, {HH, M, S, U, TZ}}, H) when is_map(H) ->
    NewTZ = maps:get(tzinfo, H, TZ),
    time(NewH,NewM,NewS,NewU,NewTZ);
 replace({datetime, D, T}, H) when is_map(H) ->
-   {timedate, replace(D, H), replace(T, H)}.
+   {datetime, replace(D, H), replace(T, H)}.
 
 timetuple(Date = {date, {Y, M, D}}) ->
    {Y, M, D, 0, 0, 0, weekday(Date), yday(Date), -1};
@@ -274,7 +285,30 @@ timetuple({datetime, D, T}) ->
    setelement(9, T4, Dst).
 
 toordinal({date, YMD}) ->
-   calendar:date_to_gregorian_days(YMD) - 365.
+   calendar:date_to_gregorian_days(YMD) - 365;
+toordinal({datetime, D, _T}) ->
+   toordinal(D).
+
+
+totimedelta(TimeDelta = {timedelta, _Values}) ->
+   TimeDelta;
+totimedelta(Date = {date, _Values}) ->
+   timedelta(toordinal(Date));
+totimedelta({time, {HH, MM, SS, U, _TZ}}) ->
+   timedelta(0,HH*3600 + MM*60 + SS, U);
+totimedelta({datetime, D, T}) ->
+   add(totimedelta(D), totimedelta(T)).
+
+timedelta_to_date({timedelta, {D, _S, _U}}) ->
+   fromordinal(D).
+
+timedelta_to_time({timedelta, {_D, S, U}}) ->
+   SS = S rem 60, M = S div 60,
+   time(M div 60, M rem 60, SS, U).
+
+timedelta_to_datetime(TimeDelta = {timedelta, _Values}) ->
+   {datetime, timedelta_to_date(TimeDelta), timedelta_to_time(TimeDelta)}.
+
 
 weekday(Date) ->
    isoweekday(Date) - 1.
@@ -283,16 +317,20 @@ yday(Date = {date, {Y, _M, _D}}) ->
    toordinal(Date) - toordinal(date(Y, 1, 1)) + 1.
 
 isoweekday({date, YMD}) ->
-   calendar:day_of_the_week(YMD).
+   calendar:day_of_the_week(YMD);
+isoweekday({datetime, D, _T}) ->
+   isoweekday(D).
 
 isocalendar(Date = {date, YMD}) ->
    {IsoY, IsoWeek} = calendar:iso_week_number(YMD),
-   {IsoY, IsoWeek, isoweekday(Date)}.
+   {IsoY, IsoWeek, isoweekday(Date)};
+isocalendar({datetime, D, _T}) ->
+   isocalendar(D).
 
 isoformat({date, {Y, M, D}}) ->
    integer_to_list(Y) ++ "-" ++ two_digit(M) ++ "-" ++ two_digit(D);
 isoformat(T = {time, {H, M, S, U, TZ}}) ->
-   Ret1 = two_digit(H) ++ ":" ++ two_digit(M) ++ ":" ++ two_digit(S),
+   Ret1 = hhmmss(H, M, S),
    Ret2 = if
       0 /= U ->
          Ret1 ++ "." ++ U;
@@ -303,17 +341,18 @@ isoformat(T = {time, {H, M, S, U, TZ}}) ->
       TZ /= undefined ->
          TZMinutes = seconds(utcoffset(T)) div 60,
          TZ_MM = TZMinutes rem 60, TZ_HH = TZMinutes div 60,
-         if
+         Ret3 = if
             TZMinutes < 0 ->
-               Ret2 ++ "-" ++ two_digit(TZ_HH)
-                    ++ ":" ++ two_digit(TZ_MM);
+               Ret2 ++ "-";
             true ->
-               Ret2 ++ "+" ++ two_digit(TZ_HH)
-                    ++ ":" ++ two_digit(TZ_MM)
-         end;
+               Ret2 ++ "+"
+         end,
+         Ret3 ++ hhmm(abs(TZ_HH), TZ_MM);
       true ->
          Ret2
-   end.
+   end;
+isoformat({datetime, D, T}) ->
+   isoformat(D) ++ "T" ++ isoformat(T).
       
 
 days() ->
@@ -324,12 +363,16 @@ months() ->
     "May", "Jun", "Jul", "Aug",
     "Sep", "Oct", "Nov", "Dec"].
 
-ctime(Date = {date, {Y, M, D}}) ->
+ctime(Date = {date, {_Y, _M, _D}}) ->
+   ctime(Date, {0, 0, 0});
+ctime({datetime, D, T}) ->
+   ctime(D, {hour(T), minute(T), second(T)}).
+ctime(Date = {date, {Y, M, D}}, {HH, MM, SS}) ->
    lists:nth(isoweekday(Date), days())
       ++ " " ++ lists:nth(M, months())
       ++ " " ++ integer_to_list(D)
-      ++ " 00:00:00 "
-      ++ integer_to_list(Y).
+      ++ " " ++ hhmmss(HH, MM, SS)
+      ++ " " ++ integer_to_list(Y).
 
 
 %% --- time ---
@@ -408,7 +451,7 @@ datetime() ->
 datetime(Year) when is_number(Year) ->
    datetime(Year, 1);
 datetime(H) when is_map(H) ->
-   {timedate,date(H),time(H)}.
+   {datetime,date(H),time(H)}.
 datetime(Year,Month) ->
    datetime(Year,Month,1).
 datetime(Year,Month,Day) ->
@@ -461,7 +504,7 @@ utctimetuple({datetime, {date, D}, T}) ->
 
 test_timedelta() ->
    Minus5Hours = timedelta(#{hours => -5}),
-   {timedelta, -1, 68400, 0} = Minus5Hours,
+   {timedelta, {-1, 68400, 0}} = Minus5Hours,
    true = -18000 == total_seconds(Minus5Hours),
    Year = timedelta(365),
    AnotherYear = timedelta(#{weeks => 40, days => 84, hours => 23, minutes => 50, seconds => 600}),
@@ -473,7 +516,8 @@ test_timedelta() ->
    3285 = days(NineYears),
    ThreeYears = divide(NineYears, 3),
    1095 = days(ThreeYears),
-   true = magnitude(sub(ThreeYears, TenYears)) == add(scale(ThreeYears, 2), Year).
+   true = magnitude(sub(ThreeYears, TenYears)) == add(scale(ThreeYears, 2), Year),
+   ok.
 
 test_date() ->
    1 = yday(date(2002,1,1)),
@@ -502,7 +546,8 @@ test_date() ->
    Date2 = date(2002,3,11),
    {2002, 3, 11, 0, 0, 0, 0, 70, -1} = timetuple(Date2),
    {2002, 11, 1} = isocalendar(Date2),
-   "2002-03-11" = isoformat(Date2).
+   "2002-03-11" = isoformat(Date2),
+   ok.
 
 test_time() ->
    T = time(#{hour => 12, minute => 10, second => 30, tzinfo => 60}),
@@ -511,12 +556,33 @@ test_time() ->
    10 = minute(T),
    30 = second(T),
    60 = tzinfo(T),
-   TD = timedelta(0),
-   TD = dst(T).
+   TD = timedelta(0, 3600),
+   TD = dst(T),
+   ok.
+
+test_datetime() ->
+   Date = date(2005, 7, 14),
+   Time = time(12, 30),
+   DateTime1 = combine(Date, Time),
+   "2005-07-14T12:30:00" = isoformat(DateTime1),
+   DateTime2 = datetime(2006, 11, 21, 16, 30),
+   {2006, 11, 21, 16, 30, 0, 1, 325, -1} = timetuple(DateTime2),
+   {2006, 47, 2} = isocalendar(DateTime2),
+   DateTime3 = datetime(#{year => 2005, month => 11, day => 21,
+                          hour => 16, minute => 30,
+                          tzinfo => 60}),
+   GMT1 = timedelta(0,3600),
+   GMT1 = utcoffset(DateTime3),
+   DateTime4 = add(DateTime2, timedelta(0, 3600)),
+   {2006, 11, 21, 17, 30, 0, 1, 325, -1} = timetuple(DateTime4),
+   DateTime5 = add(DateTime2, timedelta(1)),
+   {2006, 11, 22, 16, 30, 0, 2, 326, -1} = timetuple(DateTime5),
+   ok.
 
 
 test() ->
    test_timedelta(),
    test_date(),
-   test_time().
+   test_time(),
+   test_datetime().
    

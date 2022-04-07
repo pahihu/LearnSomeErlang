@@ -1,5 +1,9 @@
 -module(datetime).
 -define(MAX_YEAR, 9999).
+-record(timedelta, {days=0, seconds=0, microseconds=0}).
+-record(date, {year, month, day}).
+-record(time, {hour, minute, second, microsecond, tzinfo}).
+-record(datetime, {date, time}).
 
 %% --- timedelta ---
 -export([timedelta/1,
@@ -70,9 +74,9 @@ td_normalize({Days, Seconds, Microseconds}) ->
    U = trunc(Microseconds),
    S = trunc(Seconds + idiv(U, 1000000)),
    D = trunc(Days + idiv(S, 86400)),
-   {timedelta, {D,
-                mod(S, 86400),
-                mod(U, 1000000)}}.
+   #timedelta{days = D,
+              seconds = mod(S, 86400),
+              microseconds = mod(U, 1000000)}.
 
 timedelta(Days) when is_number(Days) ->
    td_normalize({Days, 0, 0});
@@ -125,46 +129,60 @@ timedelta_resolution() ->
    timedelta(0, 0, 1).
 
 
-days({timedelta, {Days, _Seconds, _Micros}}) ->
-   Days.
+days(TD) when is_record(TD, timedelta) ->
+   TD#timedelta.days.
 
-seconds({timedelta, {_Days, Seconds, _Micros}}) ->
-   Seconds.
+seconds(TD) when is_record(TD, timedelta) ->
+   TD#timedelta.seconds.
 
-microseconds({timedelta, {_Days, _Seconds, Micros}}) ->
-   Micros.
+microseconds(TD) when is_record(TD, timedelta) ->
+   TD#timedelta.microseconds.
 
 
-add({timedelta, {D1, S1, U1}}, {timedelta, {D2, S2, U2}}) ->
-   td_normalize({D1 + D2, S1 + S2, U1 + U2});
-add(Date = {date, _Values}, {timedelta, {D, _S, _U}}) ->
-   fromordinal(toordinal(Date) + D);
-add(DateTime = {datetime, _D, _T}, TimeDelta) ->
+add(TD1, TD2) when is_record(TD1, timedelta), is_record(TD2, timedelta) ->
+   td_normalize({TD1#timedelta.days + TD2#timedelta.days,
+                 TD1#timedelta.seconds + TD2#timedelta.seconds,
+                 TD1#timedelta.microseconds + TD2#timedelta.microseconds});
+add(Date, TD) when is_record(Date,date),
+                   is_record(TD, timedelta) ->
+   fromordinal(toordinal(Date) + days(TD));
+add(DateTime, TimeDelta) when is_record(DateTime, datetime),
+                              is_record(TimeDelta, timedelta) ->
    timedelta_to_datetime(add(totimedelta(DateTime), TimeDelta)).
 
 
-sub({timedelta, {D1, S1, U1}}, {timedelta, {D2, S2, U2}}) ->
-   td_normalize({D1 - D2, S1 - S2, U1 - U2});
-sub(DateTime1 = {datetime, _D1, _T1}, DateTime2 = {datetime, _D2, _T2}) ->
+sub(TD1, TD2) when is_record(TD1, timedelta), is_record(TD2, timedelta) ->
+   td_normalize({TD1#timedelta.days - TD2#timedelta.days,
+                 TD1#timedelta.seconds - TD2#timedelta.seconds,
+                 TD1#timedelta.microseconds - TD2#timedelta.microseconds});
+sub(DateTime1, DateTime2) when is_record(DateTime1, datetime),
+                               is_record(DateTime2, datetime) ->
    sub(totimedelta(DateTime1), totimedelta(DateTime2));
-sub(DateTime = {datetime, _D, _T}, TimeDelta) ->
+sub(DateTime, TimeDelta) when is_record(DateTime, datetime),
+                              is_record(TimeDelta, timedelta) ->
    timedelta_to_datetime(sub(totimedelta(DateTime), TimeDelta));
-sub(Date, {timedelta, {D, _S, _U}}) ->
-   fromordinal(toordinal(Date) - D);
+sub(Date, TD) when is_record(TD, timedelta) ->
+   fromordinal(toordinal(Date) - days(TD));
 sub(Date1, Date2) ->
    timedelta(toordinal(Date1) - toordinal(Date2)).
 
-scale({timedelta, {D, S, U}}, N) ->
-   td_normalize({N * D, N * S, N * U}).
+scale(TD, N) when is_record(TD, timedelta) ->
+   td_normalize({N * TD#timedelta.days, N * TD#timedelta.seconds, N * TD#timedelta.microseconds}).
 
-divide({timedelta, {D, S, U}}, N) ->
-   td_normalize({D / N, S / N, U / N}).
+divide(TD, N) when is_record(TD, timedelta) ->
+   td_normalize({TD#timedelta.days / N,
+                 TD#timedelta.seconds / N,
+                 TD#timedelta.microseconds / N}).
 
-negate({timedelta, {D, S, U}}) ->
-   td_normalize({-D, -S, -U}).
+negate(TD) when is_record(TD, timedelta) ->
+   td_normalize({-TD#timedelta.days,
+                 -TD#timedelta.seconds,
+                 -TD#timedelta.microseconds}).
 
-magnitude({timedelta, {D, S, U}}) ->
-   td_normalize({abs(D), abs(S), abs(U)}).
+magnitude(TD) when is_record(TD, timedelta) ->
+   td_normalize({abs(TD#timedelta.days),
+                 abs(TD#timedelta.seconds),
+                 abs(TD#timedelta.microseconds)}).
 
 
 two_digit(N) ->
@@ -181,51 +199,55 @@ hhmm(HH, MM) ->
 hhmmss(HH, MM, SS) ->
    hhmm(HH, MM) ++ ":" ++ two_digit(SS).
 
-str({timedelta, {D, S, U}}) ->
-   Ret1 = integer_to_list(D),
+str(TD) when is_record(TD, timedelta) ->
+   Ret1 = integer_to_list(TD#timedelta.days),
    Ret2 = if
-      abs(D) > 1 ->
+      abs(TD#timedelta.days) > 1 ->
          Ret1 ++ " days, ";
       true ->
          Ret1 ++ " day, "
    end,
-   SS = S rem 60,  M = S div 60,
+   SS = TD#timedelta.seconds rem 60,  M = TD#timedelta.seconds div 60,
    MM = M rem 60, HH = M div 60,
    Ret3 = Ret2 ++ hhmmss(HH, MM, SS),
    if
-      U > 0 ->
-         Ret3 ++ "." ++ integer_to_list(U);
+      TD#timedelta.microseconds > 0 ->
+         Ret3 ++ "." ++ integer_to_list(TD#timedelta.microseconds);
       true ->
          Ret3
    end.
 
 
-total_seconds({timedelta, {D, S, U}}) ->
-   D * 86400 + S + U / 1.0e6.
+total_seconds(TD) when is_record(TD, timedelta) ->
+   TD#timedelta.days * 86400
+   + TD#timedelta.seconds
+   + TD#timedelta.microseconds / 1.0e6.
 
 
 
 %% --- date ---
 date(Y, M, D) ->
-   {date, {Y, M, D}}.
+   #date{year = Y, month = M, day = D}.
 
+date({Y, M, D}) ->
+   date(Y, M, D);
 date(Opts) when is_map(Opts) ->
    Y = maps:get(year,Opts,1),
    M = maps:get(month,Opts,1),
    D = maps:get(day,Opts,1),
    date(Y,M,D);
-date({datetime, D, _T}) ->
-   D.
+date(DateTime) when is_record(DateTime, datetime) ->
+   DateTime#datetime.date.
 
 today() ->
-   {date, erlang:date()}.
+   date(erlang:date()).
 
 fromtimestamp({Megasecs, Secs, _Micros}) ->
    % 719163 = toordinal(date(1970,1,1))
    fromordinal(719163 + (Megasecs * 1000000 + Secs) div 86400).
 
 fromordinal(Days) ->
-   {date, ymd(365 + Days)}.
+   date(ymd(365 + Days)).
    
 
 date_min() ->
@@ -241,35 +263,42 @@ date_resolution() ->
 ymd(Days) ->
    calendar:gregorian_days_to_date(Days).
 
-year({date, {Y, _M, _D}}) -> Y;
-year({datetime, D, _T}) -> year(D).
+year(Date) when is_record(Date, date) -> Date#date.year;
+year(DateTime) when is_record(DateTime, datetime) ->
+   year(DateTime#datetime.date).
 
-month({date, {_Y, M, _D}}) -> M;
-month({datetime, D, _T}) -> month(D).
+month(Date) when is_record(Date, date) -> Date#date.month;
+month(DateTime) when is_record(DateTime, datetime) ->
+   month(DateTime#datetime.date).
 
-day({date, {_Y, _M, D}}) -> D;
-day({datetime, D, _T}) -> day(D).
+day(Date) when is_record(Date, date) -> Date#date.day;
+day(DateTime) when is_record(DateTime, datetime) ->
+   day(DateTime#datetime.date).
 
 
-replace({date, {Y, M, D}}, H) when is_map(H) ->
-   NewY = maps:get(year, H, Y),
-   NewM = maps:get(month, H, M),
-   NewD = maps:get(day, H, D),
+replace(Date, H) when is_record(Date, date), is_map(H) ->
+   NewY = maps:get(year,  H, Date#date.year),
+   NewM = maps:get(month, H, Date#date.month),
+   NewD = maps:get(day,   H, Date#date.day),
    date(NewY, NewM, NewD);
-replace({time, {HH, M, S, U, TZ}}, H) when is_map(H) ->
-   NewH = maps:get(hour, H, HH),
-   NewM = maps:get(minute, H, M),
-   NewS = maps:get(second, H, S),
-   NewU = maps:get(microsecond, H, U),
-   NewTZ = maps:get(tzinfo, H, TZ),
+replace(Time, H) when is_record(Time, time), is_map(H) ->
+   NewH = maps:get(hour,   H, Time#time.hour),
+   NewM = maps:get(minute, H, Time#time.minute),
+   NewS = maps:get(second, H, Time#time.second),
+   NewU = maps:get(microsecond, H, Time#time.microsecond),
+   NewTZ = maps:get(tzinfo, H, Time#time.tzinfo),
    time(NewH,NewM,NewS,NewU,NewTZ);
-replace({datetime, D, T}, H) when is_map(H) ->
-   {datetime, replace(D, H), replace(T, H)}.
+replace(DateTime, H) when is_record(DateTime, datetime), is_map(H) ->
+   combine(replace(DateTime#datetime.date, H),
+           replace(DateTime#datetime.time, H)).
 
-timetuple(Date = {date, {Y, M, D}}) ->
-   {Y, M, D, 0, 0, 0, weekday(Date), yday(Date), -1};
-timetuple({datetime, D, T}) ->
-   T1 = timetuple(D),
+timetuple(Date) when is_record(Date, date) ->
+   {Date#date.year, Date#date.month, Date#date.day,
+    0, 0, 0,
+    weekday(Date), yday(Date), -1};
+timetuple(DateTime) when is_record(DateTime, datetime) ->
+   T  = DateTime#datetime.time,
+   T1 = timetuple(DateTime#datetime.date),
    T2 = setelement(4, T1, hour(T)),
    T3 = setelement(5, T2, minute(T)),
    T4 = setelement(6, T3, second(T)),
@@ -285,30 +314,35 @@ timetuple({datetime, D, T}) ->
    end,
    setelement(9, T4, Dst).
 
-toordinal({date, YMD}) ->
-   calendar:date_to_gregorian_days(YMD) - 365;
-toordinal({datetime, D, _T}) ->
-   toordinal(D).
+date_to_tuple(Date) when is_record(Date, date) ->
+   {Date#date.year, Date#date.month, Date#date.day}.
+
+toordinal(Date) when is_record(Date, date) ->
+   calendar:date_to_gregorian_days(date_to_tuple(Date)) - 365;
+toordinal(DateTime) when is_record(DateTime, datetime) ->
+   toordinal(DateTime#datetime.date).
 
 
-totimedelta(TimeDelta = {timedelta, _Values}) ->
-   TimeDelta;
-totimedelta(Date = {date, _Values}) ->
+totimedelta(TD) when is_record(TD, timedelta) ->
+   TD;
+totimedelta(Date) when is_record(Date, date) ->
    timedelta(toordinal(Date));
-totimedelta({time, {HH, MM, SS, U, _TZ}}) ->
-   timedelta(0,HH*3600 + MM*60 + SS, U);
-totimedelta({datetime, D, T}) ->
-   add(totimedelta(D), totimedelta(T)).
+totimedelta(Time) when is_record(Time, time) ->
+   timedelta(0,Time#time.hour*3600 + Time#time.minute*60 + Time#time.second, Time#time.microsecond);
+totimedelta(DateTime) when is_record(DateTime, datetime) ->
+   add(totimedelta(DateTime#datetime.date),
+       totimedelta(DateTime#datetime.time)).
 
-timedelta_to_date({timedelta, {D, _S, _U}}) ->
-   fromordinal(D).
+timedelta_to_date(TD) when is_record(TD, timedelta) ->
+   fromordinal(TD#timedelta.days).
 
-timedelta_to_time({timedelta, {_D, S, U}}) ->
-   SS = S rem 60, M = S div 60,
-   time(M div 60, M rem 60, SS, U).
+timedelta_to_time(TD) when is_record(TD, timedelta) ->
+   SS = TD#timedelta.seconds rem 60, M = TD#timedelta.seconds div 60,
+   time(M div 60, M rem 60, SS, TD#timedelta.microseconds).
 
-timedelta_to_datetime(TimeDelta = {timedelta, _Values}) ->
-   {datetime, timedelta_to_date(TimeDelta), timedelta_to_time(TimeDelta)}.
+timedelta_to_datetime(TD) when is_record(TD, timedelta) ->
+   combine(timedelta_to_date(TD),
+           timedelta_to_time(TD)).
 
 less_than(A, B) ->
    totimedelta(A) < totimedelta(B).
@@ -317,32 +351,34 @@ less_than(A, B) ->
 weekday(Date) ->
    isoweekday(Date) - 1.
 
-yday(Date = {date, {Y, _M, _D}}) ->
-   toordinal(Date) - toordinal(date(Y, 1, 1)) + 1.
+yday(Date) when is_record(Date, date) ->
+   toordinal(Date) - toordinal(date(Date#date.year, 1, 1)) + 1.
 
-isoweekday({date, YMD}) ->
-   calendar:day_of_the_week(YMD);
-isoweekday({datetime, D, _T}) ->
-   isoweekday(D).
+isoweekday(Date) when is_record(Date, date) ->
+   calendar:day_of_the_week(date_to_tuple(Date));
+isoweekday(DateTime) when is_record(DateTime, datetime) ->
+   isoweekday(DateTime#datetime.date).
 
-isocalendar(Date = {date, YMD}) ->
-   {IsoY, IsoWeek} = calendar:iso_week_number(YMD),
+isocalendar(Date) when is_record(Date, date) ->
+   {IsoY, IsoWeek} = calendar:iso_week_number(date_to_tuple(Date)),
    {IsoY, IsoWeek, isoweekday(Date)};
-isocalendar({datetime, D, _T}) ->
-   isocalendar(D).
+isocalendar(DateTime) when is_record(DateTime, datetime) ->
+   isocalendar(DateTime#datetime.date).
 
-isoformat({date, {Y, M, D}}) ->
-   integer_to_list(Y) ++ "-" ++ two_digit(M) ++ "-" ++ two_digit(D);
-isoformat(T = {time, {H, M, S, U, TZ}}) ->
-   Ret1 = hhmmss(H, M, S),
+isoformat(Date) when is_record(Date, date) ->
+   integer_to_list(Date#date.year)
+   ++ "-" ++ two_digit(Date#date.month)
+   ++ "-" ++ two_digit(Date#date.day);
+isoformat(T) when is_record(T, time) ->
+   Ret1 = hhmmss(T#time.hour, T#time.minute, T#time.second),
    Ret2 = if
-      0 /= U ->
-         Ret1 ++ "." ++ U;
+      0 /= T#time.microsecond ->
+         Ret1 ++ "." ++ T#time.microsecond;
       true ->
          Ret1
    end,
    if
-      TZ /= undefined ->
+      T#time.tzinfo /= undefined ->
          TZMinutes = seconds(utcoffset(T)) div 60,
          TZ_MM = TZMinutes rem 60, TZ_HH = TZMinutes div 60,
          Ret3 = if
@@ -355,8 +391,9 @@ isoformat(T = {time, {H, M, S, U, TZ}}) ->
       true ->
          Ret2
    end;
-isoformat({datetime, D, T}) ->
-   isoformat(D) ++ "T" ++ isoformat(T).
+isoformat(DateTime) when is_record(DateTime, datetime) ->
+   T = DateTime#datetime.time,
+   isoformat(DateTime#datetime.date) ++ "T" ++ isoformat(T).
       
 
 days() ->
@@ -367,16 +404,17 @@ months() ->
     "May", "Jun", "Jul", "Aug",
     "Sep", "Oct", "Nov", "Dec"].
 
-ctime(Date = {date, {_Y, _M, _D}}) ->
+ctime(Date) when is_record(Date, date) ->
    ctime(Date, {0, 0, 0});
-ctime({datetime, D, T}) ->
-   ctime(D, {hour(T), minute(T), second(T)}).
-ctime(Date = {date, {Y, M, D}}, {HH, MM, SS}) ->
+ctime(DateTime) when is_record(DateTime, datetime) ->
+   T = DateTime#datetime.time,
+   ctime(DateTime#datetime.date, {hour(T), minute(T), second(T)}).
+ctime(Date, {HH, MM, SS}) when is_record(Date, date) ->
    lists:nth(isoweekday(Date), days())
-      ++ " " ++ lists:nth(M, months())
-      ++ " " ++ integer_to_list(D)
+      ++ " " ++ lists:nth(Date#date.month, months())
+      ++ " " ++ integer_to_list(Date#date.day)
       ++ " " ++ hhmmss(HH, MM, SS)
-      ++ " " ++ integer_to_list(Y).
+      ++ " " ++ integer_to_list(Date#date.year).
 
 
 %% --- time ---
@@ -386,11 +424,11 @@ t_normalize({Hours,Minutes,Seconds,Microseconds,TZInfo}) ->
    S = trunc(Seconds + idiv(U, 1000000)),
    M = trunc(Minutes + idiv(S, 60)),
    H = trunc(Hours + idiv(M, 60)),
-   {time, {mod(H, 24),
-           mod(M, 60), 
-           mod(S, 60), 
-           mod(U, 1000000),
-           TZInfo}}.
+   #time{hour = mod(H, 24)
+         minute = mod(M, 60),
+         second = mod(S, 60),
+         microsecond = mod(U, 1000000),
+         tzinfo = TZInfo}.
 
 time() ->
    {_YMD1,{ H,  M,   S}} = calendar:local_time(),
@@ -408,8 +446,8 @@ time(H) when is_map(H) ->
    t_normalize({HH,M,S,U,TZ});
 time({HH, MM, SS}) when is_number(HH), is_number(MM), is_number(SS) ->
    time(HH,MM,SS);
-time({datetime, _D, T}) ->
-   replace(T, #{tzinfo => undefined}).
+time(DateTime) when is_record(DateTime, datetime) ->
+   replace(DateTime#datetime.time, #{tzinfo => undefined}).
 time(Hour,Minute) ->
    time(Hour,Minute,0).
 time(Hour,Minute,Second) ->
@@ -421,20 +459,28 @@ time(Hour,Minute,Second,Microsecond,TZInfo) ->
 
    
 
-hour({time, {H, _M, _S, _U, _TZ}}) -> H;
-hour({datetime, _D, T}) -> hour(T).
+hour(Time) when is_record(Time, time) -> Time#time.hour;
+hour(DateTime) when is_record(DateTime, datetime) ->
+   hour(DateTime#datetime.time).
 
-minute({time, {_H, M, _S, _U, _TZ}}) -> M;
-minute({datetime, _D, T}) -> minute(T).
+minute(Time) when is_record(Time, time) -> Time#time.minute;
+minute(DateTime) when is_record(DateTime, datetime) ->
+   minute(DateTime#datetime.time).
 
-second({time, {_H, _M, S, _U, _TZ}}) -> S;
-second({datetime, _D, T}) -> second(T).
+second(Time) when is_record(Time, time) -> Time#time.second;
+second(DateTime) when is_record(DateTime, datetime) ->
+   second(DateTime#datetime.time).
 
-microsecond({time, {_H, _M, _S, U, _TZ}}) -> U;
-microsecond({datetime, _D, T}) -> microsecond(T).
+microsecond(Time) when is_record(Time, time) -> Time#time.microsecond;
+microsecond(DateTime) when is_record(DateTime, datetime) ->
+   microsecond(DateTime#datetime.time).
 
-tzinfo({time, {_H, _M, _S, _U, TZ}}) -> TZ;
-tzinfo({datetime, _D, T}) -> tzinfo(T).
+time_to_tuple(Time) when is_record(Time, time) ->
+   {Time#time.hour, Time#time.minute, Time#time.second}.
+
+tzinfo(Time) when is_record(Time, time) -> Time#time.tzinfo;
+tzinfo(DateTime) when is_record(DateTime, datetime) ->
+   tzinfo(DateTime#datetime.time).
 
 utcoffset(T) ->
    case tzinfo(T) of
@@ -444,18 +490,19 @@ utcoffset(T) ->
          timedelta(0, 60*X)
    end.
 
-dst({time, _P}) -> timedelta(0, 3600);
-dst({datetime, _D, _T}) -> timedelta(0, 3600).
+dst(Time) when is_record(Time, time) -> timedelta(0, 3600);
+dst(DateTime) when is_record(DateTime, datetime) ->
+   timedelta(0, 3600).
 
 
 %% --- datetime ---
 
 datetime() ->
-   {datetime, today(), datetime:time()}.
+   combine(today(), datetime:time()).
 datetime(Year) when is_number(Year) ->
    datetime(Year, 1);
 datetime(H) when is_map(H) ->
-   {datetime,date(H),time(H)}.
+   combine(date(H), time(H)).
 datetime(Year,Month) ->
    datetime(Year,Month,1).
 datetime(Year,Month,Day) ->
@@ -469,10 +516,11 @@ datetime(Year,Month,Day,Hour,Minute,Second) ->
 datetime(Year,Month,Day,Hour,Minute,Second,Microsecond) ->
    datetime(Year,Month,Day,Hour,Minute,Second,Microsecond,undefined).
 datetime(Year,Month,Day,Hour,Minute,Second,Microsecond,TZInfo) ->
-   {datetime,date(Year,Month,Day),time(Hour,Minute,Second,Microsecond,TZInfo)}.
+   combine(date(Year,Month,Day),
+           time(Hour,Minute,Second,Microsecond,TZInfo)).
 
 from_ymd_hms({{Y,M,D},{HH,MM,SS}}) ->
-   {datetime, date(Y,M,D), time(HH,MM,SS)}.
+   combine(date(Y,M,D), time(HH,MM,SS)).
 
 utcnow() ->
    from_ymd_hms(calendar:universal_time()).
@@ -480,8 +528,8 @@ utcnow() ->
 utcfromtimestamp(TimeStamp) ->
   from_ymd_hms(calendar:now_to_local_time(TimeStamp)).
 
-combine(Date = {date, _D}, Time = {time, _T}) ->
-   {datetime, Date, Time}.
+combine(Date, Time) when is_record(Date, date), is_record(Time, time) ->
+   #datetime{date = Date, time = Time}.
 
 datetime_min() ->
    datetime(#{year => 1, month => 1, day => 1, tzinfo => undefined}).
@@ -492,15 +540,16 @@ datetime_max() ->
 datetime_resolution() ->
    timedelta(#{microseconds => 1}).
 
-timetz({datetime, _D, T}) -> T.
+timetz(DateTime) when is_record(DateTime, datetime) ->
+   DateTime#datetime.time.
 
 astimezone(DateTime, TZInfo) ->
    Delta = timedelta(0, 60 * (tzinfo(DateTime) - TZInfo)),
    replace(sub(DateTime, Delta), #{tzinfo => TZInfo}).
 
-utctimetuple({datetime, {date, D}, T}) ->
-   [{UD, UT} | _ ] = calendar:local_time_to_universal_time_dst({D,{hour(T),minute(T),second(T)}}),
-   Tuple = timetuple({datetime, {date, UD}, time(UT)}),
+utctimetuple(DateTime) when is_record(DateTime, datetime) ->
+   [{UD, UT} | _ ] = calendar:local_time_to_universal_time_dst({date_to_tuple(DateTime#datetime.date), time_to_tuple(DateTime#datetime.time)}),
+   Tuple = timetuple(combine(date(UD), time(UT))),
    setelement(9, Tuple, 0).
 
 
@@ -508,7 +557,7 @@ utctimetuple({datetime, {date, D}, T}) ->
 
 test_timedelta() ->
    Minus5Hours = timedelta(#{hours => -5}),
-   {timedelta, {-1, 68400, 0}} = Minus5Hours,
+   #timedelta{days=-1, seconds=68400, microseconds=0} = Minus5Hours,
    true = -18000 == total_seconds(Minus5Hours),
    Year = timedelta(365),
    AnotherYear = timedelta(#{weeks => 40, days => 84, hours => 23, minutes => 50, seconds => 600}),

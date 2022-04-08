@@ -1,6 +1,8 @@
 -module(mymaps).
 -export([count_characters/1, test/0]).
 -export([to_json/1, from_json/1]).
+-export([search_pred/2]).
+-export([check_config/0]).
 
 count_characters(Str) ->
    count_characters(Str, #{}).
@@ -152,8 +154,44 @@ json_to_any([]) ->
    ok.
 
 
+search_pred(Map, Pred) when is_map(Map) ->
+   Iter = maps:iterator(Map),
+   search_pred(Pred, maps:next(Iter));
+search_pred(_Pred, none) ->
+   none;
+search_pred(Pred, {K, V, I}) ->
+   case Pred(K, V) of
+      true ->
+         {K, V};
+      false ->
+         search_pred(Pred, I)
+   end.
+
+
+slurp_file(File) ->
+   {ok, Binary} = file:read_file(File),
+   binary_to_list(Binary).
+
+keys() -> [name, port, restart, nodes].
+
+check_config() ->
+   _ValidKeys = keys(),
+   [Config | _] = from_json(slurp_file("config.js")),
+   #{name := Name} = Config, true = size(Name) > 0,
+   #{port := Port} = Config, true = is_integer(Port) andalso 1024 =< Port andalso Port =< 65535,
+   #{restart := Restart} = Config, true = Restart orelse not Restart,
+   #{nodes := Nodes} = Config, true = is_list(Nodes), true = length(Nodes) > 0,
+   ok.
+   
+
+
 test() ->
    #{101 := 1, 104 := 1, 108 := 2, 111 := 1} = count_characters("hello"),
-   {ok, Bin} = file:read_file("mymaps.js"),
-   [#{age := 42, likes := [<<"Sue">>, <<"Jane">>, <<"Brad">>], name := <<"Joe">>}] = from_json(binary_to_list(Bin)),
+   [#{age := 42, likes := [<<"Sue">>, <<"Jane">>, <<"Brad">>], name := <<"Joe">>}] = from_json(slurp_file("mymaps.js")),
+   M = #{ a => 1, b => 2, c => 3},
+   {b, 2} = search_pred(M,
+                        fun(_K,V) ->
+                           V rem 2 =:= 0
+                        end),
+   none = search_pred(M, fun(_K,_V) -> false end),
    ok.

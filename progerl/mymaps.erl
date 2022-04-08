@@ -59,10 +59,8 @@ skip(X) -> string:trim(X, leading).
 
 from_json([], A) ->
    lists:reverse(A);
-from_json([$ | T], A) ->
-   from_json(skip(T), A);
 from_json(X, A) ->
-   {V, R} = json_to_any(X),
+   {V, R} = json_to_any(skip(X)),
    from_json(R, [V | A]).
 
 from_json(X) ->
@@ -119,26 +117,22 @@ parse_key(L) ->
 
 parse_list([$] | T], A) ->
    {lists:reverse(A), T};
-parse_list([$ | T], A) ->
-   parse_list(skip(T), A);
 parse_list([$, | T], A) ->
-   parse_list(T, A);
+   parse_list(skip(T), A);
 parse_list(L, A) ->
-   {V, R} = json_to_any(L),
-   parse_list(R, [V | A]).
+   {V, R} = json_to_any(skip(L)),
+   parse_list(skip(R), [V | A]).
 
 
 parse_map([$} | T], M) ->
    {M, T};
-parse_map([$ | T], M) ->
-   parse_map(skip(T), M);
 parse_map([$, | T], M) ->
-   parse_map(T, M);
+   parse_map(skip(T), M);
 parse_map([$" | T], M) ->
    {K, R1} = parse_key(T),
    [$: | R2] = skip(R1),
    {V, R3} = json_to_any(skip(R2)),
-   parse_map(R3, M#{ K => V}).
+   parse_map(skip(R3), M#{ K => V}).
    
 
 json_to_any(L = [H|T]) ->
@@ -150,9 +144,9 @@ json_to_any(L = [H|T]) ->
       $" =:= H ->
          parse_binary(T);
       $[ =:= H ->
-         parse_list(T, []);
+         parse_list(skip(T), []);
       ${ =:= H ->
-         parse_map(T, #{})
+         parse_map(skip(T), #{})
    end;
 json_to_any([]) ->
    ok.
@@ -160,4 +154,6 @@ json_to_any([]) ->
 
 test() ->
    #{101 := 1, 104 := 1, 108 := 2, 111 := 1} = count_characters("hello"),
+   {ok, Bin} = file:read_file("mymaps.js"),
+   [#{age := 42, likes := [<<"Sue">>, <<"Jane">>, <<"Brad">>], name := <<"Joe">>}] = from_json(binary_to_list(Bin)),
    ok.

@@ -4,6 +4,23 @@
 -export([my_tuple_to_list/1]).
 -export([my_time_func/1]).
 -export([my_date_string/0]).
+-export([sqrt/1]).
+-export([read/1]).
+
+
+read(File) ->
+   case file:read_file(File) of
+      {ok, Bin} ->
+         Bin;
+      {error, Why} ->
+         throw({read, Why})
+   end.
+
+
+sqrt(X) when X < 0 ->
+   error({squareRootNegativeArgument, X});
+sqrt(X) ->
+   math:sqrt(X).
 
 
 for(Max, Max, F) ->
@@ -65,7 +82,7 @@ odds_and_evens_acc([], Odds, Evens) ->
 my_tuple_to_list(T) when is_tuple(T) ->
    my_tuple_to_list(T, tuple_size(T), []).
 
-my_tuple_to_list(T, 0, L) ->
+my_tuple_to_list(_T, 0, L) ->
    L;
 my_tuple_to_list(T, N, L) ->
    my_tuple_to_list(T, N-1, [element(N, T) | L]).
@@ -75,9 +92,9 @@ elapsed_time({M1, S1, U1}, {M0, S0, U0}) ->
    (((M1-M0) * 1000000) + (S1 - S0)) * 1000000 + (U1 - U0).
 
 my_time_func(F) ->
-   T0 = now(),
+   T0 = erlang:timestamp(),
    F(),
-   T1 = now(),
+   T1 = erlang:timestamp(),
    elapsed_time(T1,T0).
 
 

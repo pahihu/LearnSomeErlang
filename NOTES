@@ -295,3 +295,16 @@ catch
    ...
 end
 
+<<>>
+<<E1,...,En>>
+   Ei =  Value |
+         Value:Size |
+         Value/TypeSpecList |
+         Value:Size/TypeSpecList
+
+   TypeSpecList = End-Sign-Type-Unit
+   End = big* | little | native
+   Sign = signed | unsigned*
+   Type = integer* | float | binary | bytes | bitstring | bits | utf8 | utf16 | utf32
+   Unit = 1* | 2 | ... 256
+

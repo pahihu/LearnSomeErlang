@@ -308,3 +308,7 @@ end
    Type = integer* | float | binary | bytes | bitstring | bits | utf8 | utf16 | utf32
    Unit = 1* | 2 | ... 256
 
+- bit comprehension
+
+   [ X || <<X:1>> <= B ].
+   << <<X>> || <<X:1>> <= B >>.

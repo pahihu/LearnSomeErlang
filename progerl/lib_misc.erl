@@ -6,6 +6,54 @@
 -export([my_date_string/0]).
 -export([sqrt/1]).
 -export([read/1]).
+-export([exports/1]).
+-export([most_exports/0, common_funs/0, common_fun/0, unique_funs/0]).
+
+%% max of V in {K,V} list
+sortkv(KVs) ->
+   lists:sort(fun({_M1,N1},{_M2,N2}) -> N1 > N2 end,KVs).
+
+
+%% all loaded modules
+modules_loaded() ->
+   [ Mod || {Mod,_File} <- code:all_loaded() ].
+
+
+%% exported functions from all loaded modules
+%% in a hash Fun => NumExports
+all_exported() ->
+   Mods = modules_loaded(),
+   Exps = lists:flatmap(fun(M) -> exports(M) end,Mods),
+   lists:foldl(fun({Fun,_Arity},H) ->
+                     if
+                        Fun =/= module_info ->  % skip module_info/
+                           H#{ Fun => maps:get(Fun,H,0) + 1 };
+                        true ->
+                           H
+                     end
+                   end,
+                   #{},
+                   Exps).
+
+most_exports() ->
+   Mods = modules_loaded(),
+   ModExps = lists:map(fun(M) -> {M,length(exports(M))} end,Mods),
+   hd(sortkv(ModExps)).
+
+common_funs() ->
+   sortkv(maps:to_list(all_exported())).
+
+common_fun() ->
+   hd(common_funs()).
+
+unique_funs() ->
+   H = all_exported(),
+   [ Fun || {Fun, NumExps} <- maps:to_list(H), NumExps =:= 1 ].
+   
+
+%% exported functions from module Mod
+exports(Mod) ->
+   Mod:module_info(exports).
 
 
 read(File) ->

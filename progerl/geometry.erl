@@ -21,8 +21,8 @@ perimeter({rectangle, Width, Height}) ->
    2 * (Width + Height);
 perimeter({circle, Radius}) ->
    2 * math:pi() * Radius;
-perimeter({Triangle, A, B, C}) when Triangle == triangle; 
-                                    Triangle == right_triangle ->
+perimeter({Triangle, A, B, C}) when Triangle =:= triangle; 
+                                    Triangle =:= right_triangle ->
    A + B + C;
 perimeter({square, Side}) ->
    4 * Side.

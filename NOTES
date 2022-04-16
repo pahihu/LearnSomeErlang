@@ -312,3 +312,7 @@ end
 
    [ X || <<X:1>> <= B ].
    << <<X>> || <<X:1>> <= B >>.
+
+- ordering
+   number < atom < reference < fun < port < pid < tuple   < map < list < binary
+                                                  (record)

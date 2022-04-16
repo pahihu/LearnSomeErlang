@@ -308,8 +308,8 @@ timetuple(DateTime) when is_record(DateTime, datetime) ->
       _X ->
          DstSec = seconds(dst(T)),
          if
-            DstSec /= 0 -> 1;
-            true        -> 0
+            DstSec =/= 0 -> 1;
+            true         -> 0
          end
    end,
    setelement(9, T4, Dst).
@@ -372,13 +372,13 @@ isoformat(Date) when is_record(Date, date) ->
 isoformat(T) when is_record(T, time) ->
    Ret1 = hhmmss(T#time.hour, T#time.minute, T#time.second),
    Ret2 = if
-      0 /= T#time.microsecond ->
+      0 =/= T#time.microsecond ->
          Ret1 ++ "." ++ T#time.microsecond;
       true ->
          Ret1
    end,
    if
-      T#time.tzinfo /= undefined ->
+      T#time.tzinfo =/= undefined ->
          TZMinutes = seconds(utcoffset(T)) div 60,
          TZ_MM = TZMinutes rem 60, TZ_HH = TZMinutes div 60,
          Ret3 = if
@@ -424,7 +424,7 @@ t_normalize({Hours,Minutes,Seconds,Microseconds,TZInfo}) ->
    S = trunc(Seconds + idiv(U, 1000000)),
    M = trunc(Minutes + idiv(S, 60)),
    H = trunc(Hours + idiv(M, 60)),
-   #time{hour = mod(H, 24)
+   #time{hour = mod(H, 24),
          minute = mod(M, 60),
          second = mod(S, 60),
          microsecond = mod(U, 1000000),

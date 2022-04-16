@@ -57,7 +57,7 @@ to_hash(Any) when is_map(Any) -> Any.
 
 compare(H, OtherH) ->
    if
-      H == OtherH->
+      H =:= OtherH->
          equal;
       true ->
          I = maps:intersect(H, OtherH),
@@ -87,9 +87,9 @@ store(K,V,H) ->
 any(H) -> not empty(H).
 
 any({K, V}, H) ->
-   V == maps:get(K, H#hash.store, undefined);
+   V =:= maps:get(K, H#hash.store, undefined);
 any(Pred, H) when is_function(Pred, 2) ->
-   none /= mymaps:search_pred(H#hash.store, Pred).
+   none =/= mymaps:search_pred(H#hash.store, Pred).
 
 
 assoc(K, H) ->
@@ -107,7 +107,7 @@ clear(H) ->
 
 compact(H) ->
    S = H#hash.store,
-   H#hash{store = maps:filter(fun(_K, V) -> V /= nil end, S)}.
+   H#hash{store = maps:filter(fun(_K, V) -> V =/= nil end, S)}.
 
 
 default(H) -> H#hash.defval.
@@ -116,7 +116,7 @@ default_proc(H) -> H#hash.defproc.
 default(K, H) ->
    DefProc = H#hash.defproc,
    if
-      DefProc /= nil ->
+      DefProc =/= nil ->
          DefProc(K, H);
       true ->
          H#hash.defval
@@ -297,7 +297,7 @@ test_key() ->
 
 test_keep_if() ->
    H1 = hash([{n,1},{m,1},{y,3},{d,2},{a,0}]),
-   H2 = keep_if(fun(_K,V) -> V rem 2 == 1 end,H1),
+   H2 = keep_if(fun(_K,V) -> V rem 2 =:= 1 end,H1),
    [{m,1},{n,1},{y,3}] = to_a(H2),
    ok.
 
@@ -322,8 +322,8 @@ test_hash() ->
    H1 = hash([{a,1},{b,2}]),
    H2 = hash([{b,2},{a,1}]),
    H1 = H2,
-   false = H1 /= H2,
-   true = hash_value(H1) == hash_value(H2),
+   false = H1 =/= H2,
+   true = hash_value(H1) =:= hash_value(H2),
    ok.
 
 test_has_value() ->

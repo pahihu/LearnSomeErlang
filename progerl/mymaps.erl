@@ -77,7 +77,7 @@ char_number(X) ->
    orelse (X =:= $e)
    orelse (X =:= $.).
 char_atom(X)  -> char_letter(X) orelse char_number(X).
-char_notquote(X) -> $" /= X.
+char_notquote(X) -> $" =/= X.
 
 
 xtakewhile(P, L) ->

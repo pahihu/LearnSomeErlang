@@ -24,21 +24,30 @@
 -export([size/1]).
 -export([to_a/1, to_h/1, to_s/1]).
 
--export([xappend/1, xappend/2]).
 -export([test/0]).
 
 -record(hash, {store, defval = nil, defproc = nil}).
 
+-type hash()   :: {hash, map(), term() | nil, fun() | nil}.
+-type keyval() :: {term(), term()}.
+-type defproc():: fun((Key::term(), H::hash()) -> Val::term()).
+-type predicate():: fun((Key::term(), Val::term()) -> boolean()).
+
+-spec hash() -> hash().
 hash() ->
    #hash{store = #{}}.
+
+-spec hash(KVs::[keyval()]) -> Hash::hash().
 hash(L) ->
    #hash{store = maps:from_list(L)}.
 
+-spec new(DefVal::term() | DefProc::defproc) -> Hash::hash().
 new(DefProc) when is_function(DefProc,2) ->
    #hash{store = #{}, defproc = DefProc};
 new(DefVal) ->
    #hash{store = #{}, defval = DefVal}.
 
+-spec try_convert(term()) -> hash() | none().
 try_convert(Any) ->
    try to_hash(Any) of
       Val ->
@@ -53,8 +62,10 @@ try_convert(Any) ->
          throw(Exception)
    end.
 
-to_hash(Any) when is_map(Any) -> Any.
+-spec to_hash(tuple()) -> hash().
+to_hash(Any) when is_record(Any, hash) -> Any.
 
+-spec compare(Hash1::hash(), Hash2::hash()) -> equal | subset | undefined.
 compare(H, OtherH) ->
    if
       H =:= OtherH->
@@ -70,6 +81,7 @@ compare(H, OtherH) ->
    end.
 
 
+-spec element(Key::term(), H::hash()) -> Val::term().
 element(K, H) ->
    case maps:find(K, H#hash.store) of
       {ok, V} ->
@@ -79,19 +91,27 @@ element(K, H) ->
    end.
 
 
+-spec store(Key::term(), Val::term(), H1::hash()) -> H2::hash().
 store(K,V,H) ->
    S = H#hash.store,
    H#hash{store = maps:put(K, V, S)}.
 
 
+-spec any(H1::hash()) -> boolean().
 any(H) -> not empty(H).
 
+-spec any(KeyVal | Pred, H::hash()) -> boolean() when
+   Key      :: term(),
+   Val      :: term(),
+   KeyVal   :: {Key, Val},
+   Pred     :: predicate().
 any({K, V}, H) ->
    V =:= maps:get(K, H#hash.store, undefined);
 any(Pred, H) when is_function(Pred, 2) ->
    none =/= mymaps:search_pred(H#hash.store, Pred).
 
 
+-spec assoc(Key::term(), H::hash()) -> KeyVal::{term(), term()} | nil.
 assoc(K, H) ->
    case maps:find(K, H#hash.store) of
       {ok, V} ->
@@ -101,18 +121,24 @@ assoc(K, H) ->
    end.
 
 
+-spec clear(H1::hash()) -> H2::hash().
 clear(H) ->
    H#hash{store = #{}}.
 
 
+-spec compact(H1::hash()) -> H2::hash().
 compact(H) ->
    S = H#hash.store,
    H#hash{store = maps:filter(fun(_K, V) -> V =/= nil end, S)}.
 
 
+-spec default(H::hash()) -> Val::term().
 default(H) -> H#hash.defval.
+
+-spec default_proc(H::hash()) -> DefProc::defproc().
 default_proc(H) -> H#hash.defproc.
 
+-spec default(Key::term(), H::hash()) -> Val::term().
 default(K, H) ->
    DefProc = H#hash.defproc,
    if
@@ -122,13 +148,16 @@ default(K, H) ->
          H#hash.defval
    end.
 
+-spec set_default(DefVal::term(), H1::hash()) -> H2::hash().
 set_default(DefVal, H) ->
    H#hash{defval = DefVal}.
 
+-spec set_default_proc(DefProc::defproc(), H1::hash()) -> H2::hash().
 set_default_proc(DefProc, H) when is_function(DefProc, 2) ->
    H#hash{defproc = DefProc}.
 
 
+-spec delete(Key::term(), H1::hash()) -> {Val::term(), H2::hash()} | {nil, H1::hash()}.
 delete(K, H) ->
    S = H#hash.store,
    case maps:take(K, S) of
@@ -138,6 +167,8 @@ delete(K, H) ->
          {nil, H}
    end.
 
+-spec delete(Key::term(), Fun::fun((Key::term()) -> Val::term()), H1::hash()) ->
+   {Val::term(), H2::hash()}.
 delete(K, Fun, H) ->
    case delete(K, H) of
       {nil, H1} ->
@@ -146,6 +177,7 @@ delete(K, Fun, H) ->
          X
    end.
 
+-spec delete_if(Pred::predicate(), H1::hash()) -> H2::hash().
 delete_if(Pred, H) ->
    S1 = H#hash.store,
    S2 = maps:filter(fun(K,V) -> not Pred(K,V) end, S1),
@@ -154,23 +186,34 @@ delete_if(Pred, H) ->
 reject(Pred,H) -> delete_if(Pred,H).
 
 
+-spec each(Fun::fun((Key::term(), Val::term()) -> ok), H::hash()) -> ok.
 each(Fun, H) ->
    maps:foreach(Fun, H#hash.store).
 
 each_pair(Fun, H) ->
    each(Fun, H).
 
+-spec each_key(Fun::fun((Key::term()) -> ok), H::hash()) -> ok.
 each_key(Fun, H) ->
    each(fun(K,_V) -> Fun(K) end,H).
 
+-spec each_value(Fun::fun((Val::term()) -> ok), H::hash()) -> ok.
 each_value(Fun, H) ->
    each(fun(_K, V) -> Fun(V) end,H).
 
 
+-spec empty(H::hash()) -> boolean().
 empty(H) -> 0 =:= rhash:size(H).
 
+-spec fetch(Key::term(), H::hash()) -> Val::term().
 fetch(K, H) -> maps:get(K, H#hash.store).
 
+-spec fetch(Key, H, Fun | DefVal) -> Val when
+   Key   :: term(),
+   Val   :: term(),
+   H     :: hash(),
+   Fun   :: fun((Key) -> Val),
+   DefVal :: term().
 fetch(K, H, Fun) when is_function(Fun) ->
    case maps:find(K, H#hash.store) of
       {ok, V} ->
@@ -182,12 +225,15 @@ fetch(K, H, Def) ->
    maps:get(K, H#hash.store, Def).
 
 %% append is 1 level flatten, xappend can work as a multi-level flatten
+-spec xappend(L1::list()) -> L2::list().
 xappend(L) ->
    xappend(L,[],1).
 
+-spec xappend(L1::list(), N::pos_integer()) -> L2::list().
 xappend(L, N) ->
    xappend(L,[],N).
 
+-spec xappend(L1::list(), Acc::list(), N::pos_integer()) -> L2::list().
 xappend([],A,_N) ->
    A;
 xappend([H|T],A,N) ->
@@ -199,12 +245,15 @@ xappend([H|T],A,N) ->
    end,
    xappend(T,NewA,N).
 
+-spec flatten(H::hash()) -> L::list().
 flatten(H) ->
    flatten(1,H).
 
+-spec flatten(Level::non_neg_integer(), H::hash()) -> L::list().
 flatten(Level,H) when Level >= 0 ->
    xappend(lists:map(fun tuple_to_list/1,to_a(H)),Level).
 
+-spec has_key(Key::term(), H::hash()) -> boolean().
 has_key(K,H) ->
    case maps:find(K,H#hash.store) of
       {ok, _V} ->
@@ -213,28 +262,34 @@ has_key(K,H) ->
          false
    end.
 
+-spec has_value(Val::term(), H::hash()) -> boolean().
 has_value(V,H) ->
    lists:member(V,values(H)).
 
+-spec hash_value(H::hash()) -> HashVal::non_neg_integer().
 hash_value(H) ->
    erlang:phash2(H#hash.store).
 
 include(K,H) -> has_key(K,H).
 
+-spec to_s(H::hash()) -> string().
 to_s(H) ->
    lists:flatten(io_lib:format("~p",[H#hash.store])).
 
 inspect(H) -> to_s(H).
 
+-spec invert(H1::hash()) -> H2::hash().
 invert(H) ->
    S = maps:from_list(lists:map(fun({K,V}) -> {V,K} end,to_a(H))),
    H#hash{store = S}.
 
+-spec keep_if(Pred::predicate(), H1::hash()) -> H2::hash().
 keep_if(Pred, H) ->
    H#hash{store = maps:filter(Pred, H#hash.store)}.
 
 select(Pred,H) -> keep_if(Pred,H).
 
+-spec key(Val::term(), H::hash()) -> Key::term() | nil.
 key(V,H) ->
    case lists:keyfind(V,2,to_a(H)) of
       false ->
@@ -243,22 +298,29 @@ key(V,H) ->
          K
    end.
 
+-spec keys(H::hash()) -> [Key::term()].
 keys(H) -> maps:keys(H#hash.store).
 
+-spec length(H::hash()) -> non_neg_integer().
 length(H) -> rhash:size(H).
 
 member(K,H) -> has_key(K,H).
 
+-spec size(H::hash()) -> non_neg_integer().
 size(H) -> maps:size(H#hash.store).
 
+-spec to_a(H::hash()) -> KVs::[keyval()].
 to_a(H) -> maps:to_list(H#hash.store).
 
+-spec to_h(H::hash()) -> H::hash().
 to_h(H) -> H.
 
+-spec update(H1::hash(), H2::hash()) -> H3::hash().
 update(OtherH, H) ->
    S1 = H#hash.store, S2 = OtherH#hash.store,
    H#hash{store = maps:merge(S1, S2)}.
 
+-spec update(H1::hash(), Fun::fun((Key::term(),Val1::term(),Val2::term()) -> term()), H1::hash()) -> H2::hash().
 update(OtherH, Fun, H) ->
    S1 = H#hash.store, S2 = OtherH#hash.store,
    H#hash{store = maps:merge_with(Fun, S1, S2)}.
@@ -266,6 +328,7 @@ update(OtherH, Fun, H) ->
 merge(OtherH,H) -> update(OtherH,H).
 merge(OtherH,Fun,H) -> update(OtherH,Fun,H).
 
+-spec shift(H1::hash()) -> {KeyVal::{term(),term()} | term(),H2::hash()}.
 shift(H) ->
    case empty(H) of
       true ->
@@ -276,12 +339,15 @@ shift(H) ->
          {{K1,V1}, H#hash{store = maps:remove(K1,S)}}
    end.
 
+-spec values(H::hash()) -> Values::[term()].
 values(H) ->
    maps:values(H#hash.store).
 
+-spec values_at(Keys::[term()], H::hash()) -> Values::[term()].
 values_at(Ks,H) ->
    values_at(Ks, H, []).
 
+-spec values_at(Keys::[term()], H::hash(), [term()]) -> Values::[term()].
 values_at([], _H, A) ->
    lists:reverse(A);
 values_at([Kh | Kt], H, A) ->

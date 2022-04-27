@@ -316,3 +316,57 @@ end
 - ordering
    number < atom < reference < fun < port < pid < tuple   < map < list < binary
                                                   (record)
+
+...
+To confirm that another process has received your message and changed
+its memory, you must ask it (by sending it a message). This is exactly
+how we interact.
+
+   Sue: Hi, Bill, my telephone number is 345-678-1234.
+   Sue: Did you hear me?
+   Bill: Sure, your number is 345-678-1234.
+
+NB. message sending is NOT request-response !
+
+...
+An Erlang program consists of dozens, thousands, or even hundreds of
+thousands of small processes. All these processes operate independently.
+They communicate with each other by sending messages. Each process
+has a private memory. They behave like a huge room of people all chattering
+away to each other.
+
+This makes Erlang programs inherently easy to manage and scale. Suppose
+we have ten people (processes) and they have too much work to do.
+What can we do? Get more people. How can we manage these groups of
+people? It's easy - just shout instructions at them (broadcasting).
+
+Erlang processes don't share memory, so there is no need to lock the
+memory while it is being used. Where there are locks, there are keys that
+can get lost. What happens when you lose your keys? You panid and don't
+know what to do. That's what happens in software systems when you lose
+your keys and your locks go wrong.
+
+Distributed software systems with locks and keys always go wrong.
+
+Erlang has no locks and no keys.
+
+...
+Here's what we've learned so far:
+
+* Erlang programs are made of lots of processes. These processes can send
+  messages to each other.
+
+* These messages may or may not be received and understood. If you want
+  to know whether a message was received and understood, you must send
+  the process a message and wait for a reply.
+
+* Pairs of processes can be linked. If one of the processes in a linked pair
+  dies, the other process in the pair will be sent a message containing the
+  reason why the first process died.
+
+This simple model of programming is part of a model I call `concurrency-oriented
+programming'.
+
+
+
+%%% vim:set ts=3 sw=3 et:

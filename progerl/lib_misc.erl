@@ -9,6 +9,15 @@
 -export([exports/1]).
 -export([most_exports/0, common_funs/0, common_fun/0, unique_funs/0]).
 -export([sleep/1, flush_buffer/0, priority_receive/0]).
+-export([start/3]).
+
+start(Atom, Mod, Fun) ->
+   self() ! {Atom, Mod, Fun},
+   receive
+      {Atom, Mod, Fun} ->
+         undefined = whereis(Atom),
+         register(Atom, spawn(Mod, Fun, []))
+   end.
 
 priority_receive() ->
    receive

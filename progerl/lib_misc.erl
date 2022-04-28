@@ -8,6 +8,32 @@
 -export([read/1]).
 -export([exports/1]).
 -export([most_exports/0, common_funs/0, common_fun/0, unique_funs/0]).
+-export([sleep/1, flush_buffer/0, priority_receive/0]).
+
+priority_receive() ->
+   receive
+      {alarm, X} ->
+         {alarm, X}
+   after 0 ->
+      receive
+         Any ->
+            Any
+      end
+   end.
+
+flush_buffer() ->
+   receive
+      _Any ->
+         flush_buffer()
+   after 0 ->
+      true
+   end.
+
+sleep(T) ->
+   receive
+   after T ->
+      true
+   end.
 
 %% max of V in {K,V} list
 sortkv(KVs) ->
@@ -150,3 +176,4 @@ my_date_string() ->
    { Y,  M,  D} = date(),
    {HH, MM, SS} = time(),
    io:format("Today is ~w-~w-~w ~w:~w:~w~n", [Y, M, D, HH, MM, SS]).
+

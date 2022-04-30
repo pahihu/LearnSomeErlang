@@ -10,13 +10,33 @@
 -export([most_exports/0, common_funs/0, common_fun/0, unique_funs/0]).
 -export([sleep/1, flush_buffer/0, priority_receive/0]).
 -export([start/3]).
+-export([echo/0]).
+
+echo() ->
+   receive
+      {_From, exit} ->
+         void;
+      {From, Any} ->
+         From ! {echo, Any},
+         echo()
+   end.
 
 start(Atom, Mod, Fun) ->
-   self() ! {Atom, Mod, Fun},
+   % (c) Stratus3D
+   Starter = self(),
+   Pid = spawn(fun() ->
+                  try register(Atom,self()) of
+                     true ->
+                        Starter ! {self(), ok},
+                        Mod:Fun()
+                  catch
+                     error:_ ->
+                        Starter ! {self(), error}
+                  end
+               end),
    receive
-      {Atom, Mod, Fun} ->
-         undefined = whereis(Atom),
-         register(Atom, spawn(Mod, Fun, []))
+      {Pid, Any} ->
+         ok = Any
    end.
 
 priority_receive() ->
